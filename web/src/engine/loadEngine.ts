@@ -8,7 +8,7 @@ import createDslabEngine from '../generated/dslab_engine.mjs';
 import wasmAssetUrl from '../generated/dslab_engine.wasm?url';
 
 import { EngineClient } from './client';
-import type { EngineResponse } from './protocol';
+import { STRUCTURES, type EngineResponse, type StructureName } from './protocol';
 
 const WASM_FILE = 'dslab_engine.wasm';
 
@@ -27,8 +27,8 @@ export class EngineLoadError extends Error {
 
 export interface LoadedEngine {
   readonly client: EngineClient;
-  /** The stack's state when the page opened (a read-only "snapshot" request). */
-  readonly initial: EngineResponse;
+  /** Each structure's state when the page opened (read-only "snapshot" requests). */
+  readonly initial: Readonly<Record<StructureName, EngineResponse>>;
 }
 
 let loading: Promise<LoadedEngine> | null = null;
@@ -82,7 +82,11 @@ async function load(): Promise<LoadedEngine> {
   }
 
   const client = new EngineClient(new module.Engine());
-  return { client, initial: client.send('stack', 'snapshot') };
+  const initial = {} as Record<StructureName, EngineResponse>;
+  for (const structure of STRUCTURES) {
+    initial[structure] = client.send(structure, 'snapshot');
+  }
+  return { client, initial };
 }
 
 /** Runs Emscripten's startup with our compiled module instead of letting it fetch one. */

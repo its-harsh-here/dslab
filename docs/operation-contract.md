@@ -110,6 +110,39 @@ step is an `unlink` event when the stack was empty (`node.next <- NIL`).
 Duplicates allowed. `enqueue` links after `rear`. When the queue is empty, both `front`
 and `rear` point at the new node. When `dequeue` removes the last node, both become null.
 
+Step IDs (the same listings are comments in `engine/src/Queue.cpp`):
+
+```
+enqueue(value):                                queue.enqueue.enter
+  if size = 200: reject CAPACITY_EXCEEDED      queue.enqueue.full
+  node <- new Node(value)                      queue.enqueue.create
+  if rear = NIL: front <- node                 queue.enqueue.linkFront
+  else: rear.next <- node                      queue.enqueue.linkRear
+  rear <- node                                 queue.enqueue.moveRear
+  return node                                  queue.enqueue.done
+
+dequeue():                                     queue.dequeue.enter
+  if front = NIL: reject EMPTY_STRUCTURE       queue.dequeue.empty
+  node <- front                                queue.dequeue.take       (move)
+  front <- node.next                           queue.dequeue.moveFront  (link, or unlink when NIL)
+  if front = NIL: rear <- NIL                  queue.dequeue.clearRear  (unlink)
+  value <- node.value
+  delete node                                  queue.dequeue.remove
+  return value                                 queue.dequeue.done
+
+front():                                       queue.front.enter
+  if front = NIL: reject EMPTY_STRUCTURE       queue.front.empty
+  value <- front.value                         queue.front.read
+  return value                                 queue.front.done
+
+clear():                                       queue.clear.enter
+  while front != NIL:
+    node <- front; front <- node.next
+    if front = NIL: rear <- NIL
+    delete node                                queue.clear.remove   (one frame per node)
+  return removed                               queue.clear.done
+```
+
 ### 2.3 Singly linked list (`head` pointer only)
 
 | Operation | Args | Mutates | Errors | Success `data` | Algorithm |

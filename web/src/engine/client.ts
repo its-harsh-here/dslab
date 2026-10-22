@@ -1,8 +1,8 @@
 import {
   SCHEMA_VERSION,
+  type Args,
   type EngineRequest,
   type EngineResponse,
-  type StackOperation,
   type StructureName,
 } from './protocol';
 
@@ -20,7 +20,7 @@ export class EngineClient {
 
   constructor(private readonly engine: EngineHandle) {}
 
-  send(structure: StructureName, operation: StackOperation, args: Record<string, number> = {}): EngineResponse {
+  send(structure: StructureName, operation: string, args: Args = {}): EngineResponse {
     const request: EngineRequest = {
       schemaVersion: SCHEMA_VERSION,
       requestId: this.nextRequestId++,

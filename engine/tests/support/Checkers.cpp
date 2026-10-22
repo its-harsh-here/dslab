@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "dslab/Limits.h"
 
@@ -21,18 +22,15 @@ bool contains(const Snapshot& snapshot, NodeId node) {
                        [node](const NodeView& view) { return view.id == node; });
 }
 
-// True when 'from' is listed and its next link is 'to'.
+// True when 'from' is listed and one of its links points at 'to'.
 bool hasLink(const Snapshot& snapshot, NodeId from, NodeId to) {
-    return std::any_of(snapshot.nodes.begin(), snapshot.nodes.end(),
-                       [from, to](const NodeView& view) { return view.id == from && view.next == to; });
+    return std::any_of(snapshot.nodes.begin(), snapshot.nodes.end(), [from, to](const NodeView& view) {
+        return view.id == from && view.next == to;
+    });
 }
 
-}  // namespace
-
-std::string checkStackSnapshot(const Snapshot& snapshot) {
-    if (snapshot.structure != StructureKind::Stack) {
-        return "the snapshot is not a stack";
-    }
+// Sizes agree, at most 200 nodes, IDs positive and strictly ascending.
+std::string checkCommon(const Snapshot& snapshot) {
     if (snapshot.size != static_cast<int>(snapshot.nodes.size())) {
         return "size " + std::to_string(snapshot.size) + " does not match " +
                std::to_string(snapshot.nodes.size()) + " listed nodes";
@@ -40,14 +38,22 @@ std::string checkStackSnapshot(const Snapshot& snapshot) {
     if (snapshot.size > kMaxNodes) {
         return "more than 200 nodes";
     }
-
-    std::map<NodeId, NodeId> nextOf;
     NodeId previous = kNoNode;
     for (const NodeView& node : snapshot.nodes) {
         if (node.id <= previous) {
             return "IDs are not positive and strictly ascending at node " + id(node.id);
         }
         previous = node.id;
+    }
+    return "";
+}
+
+// The chain from 'entry' must reach every node once and end at NIL.
+// On success 'chain' holds the IDs in order.
+std::string checkChain(const Snapshot& snapshot, NodeId entry, const char* entryName,
+                       std::vector<NodeId>& chain) {
+    std::map<NodeId, NodeId> nextOf;
+    for (const NodeView& node : snapshot.nodes) {
         nextOf[node.id] = node.next;
     }
     for (const NodeView& node : snapshot.nodes) {
@@ -55,24 +61,68 @@ std::string checkStackSnapshot(const Snapshot& snapshot) {
             return "node " + id(node.id) + " links to missing node " + id(node.next);
         }
     }
-
-    if ((snapshot.top == kNoNode) != snapshot.nodes.empty()) {
-        return "top must be NIL exactly when the stack is empty";
+    if ((entry == kNoNode) != snapshot.nodes.empty()) {
+        return std::string(entryName) + " must be NIL exactly when the structure is empty";
     }
-    if (snapshot.top != kNoNode && nextOf.count(snapshot.top) == 0) {
-        return "top points to missing node " + id(snapshot.top);
+    if (entry != kNoNode && nextOf.count(entry) == 0) {
+        return std::string(entryName) + " points to missing node " + id(entry);
     }
 
     std::set<NodeId> seen;
-    for (NodeId node = snapshot.top; node != kNoNode; node = nextOf[node]) {
+    for (NodeId node = entry; node != kNoNode; node = nextOf[node]) {
         if (!seen.insert(node).second) {
-            return "the chain from top loops back to node " + id(node);
+            return "the chain from " + std::string(entryName) + " loops back to node " + id(node);
         }
+        chain.push_back(node);
     }
     if (seen.size() != snapshot.nodes.size()) {
-        return "some nodes cannot be reached from top";
+        return std::string("some nodes cannot be reached from ") + entryName;
     }
     return "";
+}
+
+std::string checkLinear(const Snapshot& snapshot) {
+    std::vector<NodeId> chain;
+    switch (snapshot.structure) {
+        case StructureKind::Stack:
+            if (snapshot.front != kNoNode || snapshot.rear != kNoNode) {
+                return "a stack must not use front or rear";
+            }
+            return checkChain(snapshot, snapshot.top, "top", chain);
+        case StructureKind::Queue: {
+            if (snapshot.top != kNoNode) {
+                return "a queue must not use top";
+            }
+            const std::string problem = checkChain(snapshot, snapshot.front, "front", chain);
+            if (!problem.empty()) {
+                return problem;
+            }
+            const NodeId last = chain.empty() ? kNoNode : chain.back();
+            if (snapshot.rear != last) {
+                return "rear is " + id(snapshot.rear) + " but the last node is " + id(last);
+            }
+            return "";
+        }
+    }
+    return "unknown structure";
+}
+
+}  // namespace
+
+std::string wireName(StructureKind structure) {
+    switch (structure) {
+        case StructureKind::Stack: return "stack";
+        case StructureKind::Queue: return "queue";
+    }
+    return "unknown";
+}
+
+std::string checkSnapshot(const Snapshot& snapshot) {
+    const std::string common = checkCommon(snapshot);
+    if (!common.empty()) {
+        return common;
+    }
+    return checkLinear(snapshot);
 }
 
 std::string checkFrames(const Response& response, const Snapshot& before) {
@@ -106,6 +156,7 @@ std::string checkFrames(const Response& response, const Snapshot& before) {
         return "the reject explanation differs from the result message";
     }
 
+    const std::string prefix = wireName(response.snapshot.structure) + ".";
     std::set<NodeId> seenInThisOperation;
     for (std::size_t i = 0; i < frames.size(); ++i) {
         const Frame& frame = frames[i];
@@ -114,10 +165,13 @@ std::string checkFrames(const Response& response, const Snapshot& before) {
         if (frame.index != static_cast<int>(i)) {
             return where + "index is " + std::to_string(frame.index);
         }
+        if (frame.snapshot.structure != response.snapshot.structure) {
+            return where + "shows a different structure";
+        }
         if (!response.status.ok() && frame.snapshot != before) {
             return where + "a rejected operation changed the state";
         }
-        if (frame.stepId.rfind("stack.", 0) != 0 && frame.stepId.rfind("common.", 0) != 0) {
+        if (frame.stepId.rfind(prefix, 0) != 0 && frame.stepId.rfind("common.", 0) != 0) {
             return where + "step ID '" + frame.stepId + "' has the wrong prefix";
         }
         const std::string& sentence = frame.explanation;

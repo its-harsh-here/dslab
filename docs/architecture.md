@@ -227,20 +227,23 @@ of this exchange is worked example 2 in operation-contract.md.
 
 11. **Layout, once per response.** Positions are computed for every frame in order,
     because each frame's positions depend on the previous frame's positions:
-    - a node reachable from the entry pointer (`top`, `front`, `head` or `root`) gets its
-      normal place. Linear structures use their index along the `next` chain (stack
-      vertical with top at the top; queue and list horizontal with front/head on the
-      left). Trees use x = in-order rank × column width and y = depth × row height,
-      computed from `left`/`right`;
-    - a node that is not reachable in this frame (just created, detached during a delete,
-      or the not-yet-reversed part of a list) keeps its position from the previous frame;
-    - a node with no previous position goes in a staging spot beside the first node
-      named in the frame's `pointers` that already has a position, else beside the
-      entry node, else at the origin.
+    - when **every** node is reachable from the entry pointer (`top`, `front`, `head` or
+      `root`), the structure is consistent and all nodes get their normal places.
+      Linear structures use their index along the `next` chain (the stack bottom-up;
+      the queue and list left to right from front/head). Trees use x = in-order rank ×
+      column width and y = depth × row height, computed from `left`/`right`;
+    - when some node is not reachable (mid-operation: just created, being unlinked, or
+      the not-yet-reversed part of a list), **every** node keeps its position from the
+      previous frame. Nothing jumps while links are being changed, and the next
+      consistent frame slides everything into place. (Placing only the reachable nodes
+      would make a dequeued node and the new front overlap.);
+    - a node with no previous position goes in its structure's staging spot: for the
+      stack, right of the slot above the top; for the queue, below the slot after the
+      rear; for the list and trees, below the first node named in the frame's
+      `pointers` that has a position.
 
-    The stack is drawn bottom-up: the bottom node is at y = 0 and a push adds a row on
-    top. Its staging spot is to the right of the slot above the current top, so a pushed
-    node slides straight left into place.
+    Code: `web/src/layout/layout.ts` (the rule above, interpolation, viewBox) and one
+    `LayoutStrategy` per structure (`linear.ts`, `tree.ts`).
 
     Frame 0 starts from the final positions of the previous response. Layout reads links
     only to place nodes. It never changes a link and never decides an outcome.

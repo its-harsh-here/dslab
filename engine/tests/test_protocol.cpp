@@ -82,7 +82,7 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
          R"({"schemaVersion":1,"requestId":-1,"structure":"stack","operation":"pop","args":{}})",
          "BAD_REQUEST", false},
         {"structure not yet built",
-         R"({"schemaVersion":1,"requestId":1,"structure":"bst","operation":"insert","args":{"value":1}})",
+         R"({"schemaVersion":1,"requestId":1,"structure":"avl","operation":"insert","args":{"value":1}})",
          "UNKNOWN_STRUCTURE", false},
         {"operation not yet built",
          R"({"schemaVersion":1,"requestId":1,"structure":"stack","operation":"undo","args":{}})",
@@ -128,6 +128,33 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         const Json next = send(engine, pushRequest("20", 3));
         CHECK(next["result"]["data"]["nodeId"] == 2);
     }
+}
+
+TEST_CASE("structures are independent and each uses its own snapshot fields") {
+    Engine engine;
+    send(engine, pushRequest("10"));
+    const Json queued = send(
+        engine, R"({"schemaVersion":1,"requestId":2,"structure":"queue","operation":"enqueue","args":{"value":7}})");
+    CHECK(queued["result"]["status"] == "ok");
+    CHECK(queued["result"]["data"]["nodeId"] == 1);  // IDs are counted per structure
+
+    const Json& snapshot = queued["snapshot"];
+    CHECK(snapshot["structure"] == "queue");
+    CHECK(snapshot["front"] == 1);
+    CHECK(snapshot["rear"] == 1);
+    CHECK_FALSE(snapshot.contains("top"));
+    CHECK(snapshot["nodes"] == Json::parse(R"([{"id":1,"value":7,"next":null}])"));
+
+    // A stack operation name is unknown to the queue, and the queue is untouched.
+    const Json wrong = send(
+        engine, R"({"schemaVersion":1,"requestId":3,"structure":"queue","operation":"push","args":{"value":1}})");
+    CHECK(wrong["result"]["code"] == "UNKNOWN_OPERATION");
+    CHECK(wrong["snapshot"] == snapshot);
+
+    const Json stack = send(
+        engine, R"({"schemaVersion":1,"requestId":4,"structure":"stack","operation":"snapshot","args":{}})");
+    CHECK(stack["snapshot"]["size"] == 1);
+    CHECK_FALSE(stack["snapshot"].contains("front"));
 }
 
 TEST_CASE("the smallest and largest 32-bit values are accepted") {

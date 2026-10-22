@@ -7,6 +7,7 @@
   --node-stroke: #57606a;
   --accent: #0969da;
   --accent-fill: #ddf4ff;
+  --select: #8250df;
   --error: #cf222e;
   --error-fill: #ffebe9;
   color-scheme: light dark;
@@ -22,6 +23,7 @@
     --node-stroke: #8b949e;
     --accent: #4493f8;
     --accent-fill: #12263d;
+    --select: #ab7df8;
     --error: #f85149;
     --error-fill: #2d1214;
   }
@@ -40,7 +42,7 @@ body {
 }
 
 main {
-  max-width: 760px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 24px 16px 48px;
 }
@@ -52,7 +54,7 @@ h1 {
 
 h2 {
   font-size: 1.2rem;
-  margin: 24px 0 12px;
+  margin: 20px 0 12px;
 }
 
 .subtitle,
@@ -61,6 +63,35 @@ h2 {
   margin: 4px 0 0;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tabs button {
+  padding: 8px 14px;
+  font: inherit;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tabs button[aria-selected='true'] {
+  border-color: var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: -1px;
+}
+
+/* Controls */
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -69,7 +100,7 @@ h2 {
 }
 
 .controls input {
-  width: 10rem;
+  width: 8rem;
   padding: 6px 8px;
   font: inherit;
 }
@@ -80,17 +111,30 @@ h2 {
   cursor: pointer;
 }
 
+.controls button:disabled {
+  cursor: not-allowed;
+}
+
+.controls .group-label {
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+.selection {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
 .input-error {
   color: var(--error);
   margin: 6px 0 0;
 }
 
-/* The drawing sits at the bottom of a scrollable area, so a growing stack
-   extends upwards and the top of the stack is what you see first. */
+/* The drawing area scrolls when the structure is large. */
 .stage {
   display: flex;
   flex-direction: column;
-  min-height: 320px;
+  min-height: 300px;
   max-height: 65vh;
   overflow: auto;
   margin-top: 16px;
@@ -99,26 +143,49 @@ h2 {
   padding: 8px;
 }
 
-.stack-svg {
-  margin-top: auto;
-  align-self: center;
+.structure-svg {
   flex: none;
+  align-self: flex-start;
 }
 
-.node rect {
+/* The stack sits at the bottom, so a growing stack extends upwards. */
+.stage-bottom .structure-svg {
+  margin-top: auto;
+}
+
+/* Nodes */
+.node rect,
+.node circle {
   fill: var(--node-fill);
   stroke: var(--node-stroke);
   stroke-width: 1.5;
 }
 
-.node.highlighted rect {
+.node.highlighted rect,
+.node.highlighted circle {
   fill: var(--accent-fill);
   stroke: var(--accent);
   stroke-width: 3;
 }
 
-.node.detached rect {
+.node.detached rect,
+.node.detached circle {
   stroke-dasharray: 5 4;
+}
+
+.node.selected rect,
+.node.selected circle {
+  stroke: var(--select);
+  stroke-width: 3.5;
+}
+
+.node[role='button'] {
+  cursor: pointer;
+}
+
+.node[role='button']:focus-visible {
+  outline: 2px solid var(--select);
+  outline-offset: 4px;
 }
 
 .node-value {
@@ -127,14 +194,20 @@ h2 {
   font-weight: 600;
 }
 
-.node-id {
+.node-id,
+.index-label {
   fill: var(--muted);
   font-size: 10px;
 }
 
+.index-label {
+  font-size: 12px;
+}
+
+/* Links and markers */
 .edge,
 .null-link line,
-.top-marker line {
+.marker line {
   stroke: var(--line);
   stroke-width: 1.5;
 }
@@ -148,20 +221,36 @@ h2 {
   fill: var(--line);
 }
 
+.arrow-head.hot {
+  fill: var(--accent);
+}
+
+.edge-label {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.edge-label.highlighted {
+  fill: var(--accent);
+}
+
 .null-link text,
 .null-text {
   fill: var(--muted);
   font-size: 11px;
+  font-weight: 400;
 }
 
-.top-marker text {
+.marker text {
   fill: var(--text);
   font-weight: 700;
   font-size: 14px;
 }
 
-.top-marker .null-text {
+.marker .null-text {
   font-weight: 400;
+  font-size: 11px;
 }
 
 .pointer-label {
@@ -169,10 +258,15 @@ h2 {
   font-size: 13px;
 }
 
+/* Below the drawing */
 .explanation {
   font-size: 1.1rem;
   margin: 16px 0 0;
   min-height: 1.5em;
+}
+
+.output-strip {
+  margin: 8px 0 0;
 }
 
 .result {

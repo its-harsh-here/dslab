@@ -13,11 +13,16 @@ using Value = std::int32_t;
 using NodeId = std::int32_t;
 constexpr NodeId kNoNode = 0;
 
-// The structures this engine implements. Later milestones add the other six.
-enum class StructureKind { Stack };
+// The structures this engine implements. AVL and red-black trees come later.
+enum class StructureKind { Stack, Queue };
+
+// Stack, queue and list nodes link with "next"; tree nodes with left/right/parent.
+inline bool isLinear(StructureKind structure) {
+    return structure == StructureKind::Stack || structure == StructureKind::Queue;
+}
 
 // What one frame shows (operation-contract.md, section 6.2).
-// Only the events the stack uses exist so far.
+// Only the events used so far exist.
 enum class Event {
     Begin,   // first frame: the state before anything happened
     Move,    // a cursor variable moved to a node

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "dslab/Frame.h"
@@ -13,11 +14,48 @@
 
 namespace dslab {
 
-// One named number in the result data, such as {"nodeId", 3}.
+// One named item of result data, such as "nodeId": 3 or "found": false.
+// 'kind' says which member holds the value.
 struct DataField {
+    enum class Kind { Integer, Boolean, Null, IntegerList };
+
     std::string name;
-    std::int64_t value = 0;
+    Kind kind = Kind::Integer;
+    std::int64_t integer = 0;
+    bool boolean = false;
+    std::vector<std::int64_t> list;
 };
+
+inline DataField integerField(std::string name, std::int64_t value) {
+    DataField field;
+    field.name = std::move(name);
+    field.kind = DataField::Kind::Integer;
+    field.integer = value;
+    return field;
+}
+
+inline DataField booleanField(std::string name, bool value) {
+    DataField field;
+    field.name = std::move(name);
+    field.kind = DataField::Kind::Boolean;
+    field.boolean = value;
+    return field;
+}
+
+inline DataField nullField(std::string name) {
+    DataField field;
+    field.name = std::move(name);
+    field.kind = DataField::Kind::Null;
+    return field;
+}
+
+inline DataField listField(std::string name, std::vector<std::int64_t> values) {
+    DataField field;
+    field.name = std::move(name);
+    field.kind = DataField::Kind::IntegerList;
+    field.list = std::move(values);
+    return field;
+}
 
 struct Response {
     Status status;

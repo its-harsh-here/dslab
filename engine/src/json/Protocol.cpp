@@ -22,13 +22,82 @@ namespace {
 using Json = nlohmann::ordered_json;
 
 // ---------------------------------------------------------------------------
-// Names on the wire
+// The structures, their operations and the arguments each operation takes
 
-const char* structureName(StructureKind structure) {
-    switch (structure) {
-        case StructureKind::Stack: return "stack";
+// Arguments an operation can take, combined with |.
+enum ArgFlag : unsigned {
+    kNoArgs = 0,
+    kValueArg = 1,
+};
+
+struct OperationInfo {
+    const char* name;
+    Operation operation;
+    unsigned args;
+};
+
+struct StructureInfo {
+    const char* name;         // on the wire, e.g. "stack"
+    const char* displayName;  // in messages, e.g. "the stack"
+    StructureKind kind;
+    std::vector<OperationInfo> operations;
+};
+
+const std::vector<StructureInfo>& structureTable() {
+    static const std::vector<StructureInfo> table = {
+        {"stack", "stack", StructureKind::Stack,
+         {{"push", Operation::Push, kValueArg},
+          {"pop", Operation::Pop, kNoArgs},
+          {"peek", Operation::Peek, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs}}},
+        {"queue", "queue", StructureKind::Queue,
+         {{"enqueue", Operation::Enqueue, kValueArg},
+          {"dequeue", Operation::Dequeue, kNoArgs},
+          {"front", Operation::Front, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs}}},
+    };
+    return table;
+}
+
+const StructureInfo* findStructure(const std::string& name) {
+    for (const StructureInfo& info : structureTable()) {
+        if (name == info.name) {
+            return &info;
+        }
     }
-    return "stack";
+    return nullptr;
+}
+
+const StructureInfo& infoOf(StructureKind kind) {
+    for (const StructureInfo& info : structureTable()) {
+        if (info.kind == kind) {
+            return info;
+        }
+    }
+    return structureTable().front();
+}
+
+const OperationInfo* findOperation(const StructureInfo& structure, const std::string& name) {
+    for (const OperationInfo& info : structure.operations) {
+        if (name == info.name) {
+            return &info;
+        }
+    }
+    return nullptr;
+}
+
+// "a, b and c"
+std::string joinNames(const std::vector<std::string>& names) {
+    std::string text;
+    for (std::size_t i = 0; i < names.size(); ++i) {
+        if (i > 0) {
+            text += (i + 1 == names.size()) ? " and " : ", ";
+        }
+        text += names[i];
+    }
+    return text;
 }
 
 const char* eventName(Event event) {
@@ -60,28 +129,6 @@ const char* errorCodeName(ErrorCode code) {
         case ErrorCode::InternalError: return "INTERNAL_ERROR";
     }
     return "INTERNAL_ERROR";
-}
-
-// The stack's operations and whether each takes a "value" argument.
-struct OperationInfo {
-    const char* name;
-    Operation operation;
-    bool takesValue;
-};
-
-const OperationInfo kStackOperations[] = {
-    {"push", Operation::Push, true},   {"pop", Operation::Pop, false},
-    {"peek", Operation::Peek, false},  {"clear", Operation::Clear, false},
-    {"snapshot", Operation::Snapshot, false},
-};
-
-const OperationInfo* findOperation(const std::string& name) {
-    for (const OperationInfo& info : kStackOperations) {
-        if (name == info.name) {
-            return &info;
-        }
-    }
-    return nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +189,21 @@ std::string mention(const std::string& text) {
     return printable ? "\"" + text + "\"" : std::string("(not shown)");
 }
 
+// Reads the integer argument 'name' into 'target', or returns the protocol error.
+Status readInteger(const Json& args, const char* name, std::int32_t& target) {
+    const Json& value = *member(args, name);
+    if (!value.is_number_integer()) {
+        return errorStatus(ErrorCode::BadRequest, std::string("\"") + name + "\" must be an integer.");
+    }
+    if (!fitsInt32(value)) {
+        return errorStatus(ErrorCode::ValueOutOfRange,
+                           std::string("The ") + name + " " + compact(value) +
+                               " is outside the 32-bit signed integer range.");
+    }
+    target = value.get<std::int32_t>();
+    return okStatus();
+}
+
 ParsedRequest parseRequest(const std::string& text) {
     ParsedRequest parsed;
     if (text.size() > kMaxRequestBytes) {
@@ -191,56 +253,62 @@ ParsedRequest parseRequest(const std::string& text) {
     parsed.request.requestId = requestId.get<std::int32_t>();
     parsed.echo.requestId = parsed.request.requestId;
 
-    const Json& structure = *member(json, "structure");
-    if (!structure.is_string()) {
+    const Json& structureName = *member(json, "structure");
+    if (!structureName.is_string()) {
         return fail(parsed, ErrorCode::BadRequest, "\"structure\" must be a string.");
     }
-    if (structure.get<std::string>() != "stack") {
+    const StructureInfo* structure = findStructure(structureName.get<std::string>());
+    if (structure == nullptr) {
+        std::vector<std::string> known;
+        for (const StructureInfo& info : structureTable()) {
+            known.push_back(info.name);
+        }
         return fail(parsed, ErrorCode::UnknownStructure,
-                    "Unknown structure " + mention(structure.get<std::string>()) +
-                        "; this engine has only \"stack\" so far.");
+                    "Unknown structure " + mention(structureName.get<std::string>()) +
+                        "; this engine has " + joinNames(known) + " so far.");
     }
-    parsed.request.structure = StructureKind::Stack;
-    parsed.echo.structure = StructureKind::Stack;
+    parsed.request.structure = structure->kind;
+    parsed.echo.structure = structure->kind;
 
-    const Json& operation = *member(json, "operation");
-    if (!operation.is_string()) {
+    const Json& operationName = *member(json, "operation");
+    if (!operationName.is_string()) {
         return fail(parsed, ErrorCode::BadRequest, "\"operation\" must be a string.");
     }
-    const OperationInfo* info = findOperation(operation.get<std::string>());
-    if (info == nullptr) {
+    const OperationInfo* operation = findOperation(*structure, operationName.get<std::string>());
+    if (operation == nullptr) {
+        std::vector<std::string> known;
+        for (const OperationInfo& info : structure->operations) {
+            known.push_back(info.name);
+        }
         return fail(parsed, ErrorCode::UnknownOperation,
-                    "The stack has no operation " + mention(operation.get<std::string>()) +
-                        "; it has push, pop, peek, clear and snapshot.");
+                    std::string("The ") + structure->displayName + " has no operation " +
+                        mention(operationName.get<std::string>()) + "; it has " +
+                        joinNames(known) + ".");
     }
-    parsed.request.operation = info->operation;
-    parsed.echo.operation = info->name;
+    parsed.request.operation = operation->operation;
+    parsed.echo.operation = operation->name;
 
     const Json& args = *member(json, "args");
     if (!args.is_object()) {
         return fail(parsed, ErrorCode::BadRequest, "\"args\" must be an object.");
     }
     for (const auto& item : args.items()) {
-        if (!(info->takesValue && item.key() == "value")) {
+        const bool allowed = (item.key() == "value" && (operation->args & kValueArg) != 0);
+        if (!allowed) {
             return fail(parsed, ErrorCode::BadRequest,
-                        std::string(info->name) + " has no argument " + mention(item.key()) + ".");
+                        std::string(operation->name) + " has no argument " + mention(item.key()) + ".");
         }
     }
-    if (info->takesValue) {
-        const Json* value = member(args, "value");
-        if (value == nullptr) {
+    if ((operation->args & kValueArg) != 0) {
+        if (member(args, "value") == nullptr) {
             return fail(parsed, ErrorCode::BadRequest,
-                        std::string(info->name) + " needs the argument \"value\".");
+                        std::string(operation->name) + " needs the argument \"value\".");
         }
-        if (!value->is_number_integer()) {
-            return fail(parsed, ErrorCode::BadRequest, "\"value\" must be an integer.");
+        const Status status = readInteger(args, "value", parsed.request.value);
+        if (!status.ok()) {
+            parsed.status = status;
+            return parsed;
         }
-        if (!fitsInt32(*value)) {
-            return fail(parsed, ErrorCode::ValueOutOfRange,
-                        "The value " + compact(*value) +
-                            " is outside the 32-bit signed integer range.");
-        }
-        parsed.request.value = value->get<std::int32_t>();
     }
 
     parsed.status = okStatus();
@@ -254,6 +322,7 @@ Json nodeOrNull(NodeId id) {
     return id == kNoNode ? Json(nullptr) : Json(id);
 }
 
+// Only the fields of this structure (operation-contract.md, 5.4).
 Json snapshotJson(const Snapshot& snapshot) {
     Json nodes = Json::array();
     for (const NodeView& node : snapshot.nodes) {
@@ -265,9 +334,17 @@ Json snapshotJson(const Snapshot& snapshot) {
     }
 
     Json json = Json::object();
-    json["structure"] = structureName(snapshot.structure);
+    json["structure"] = infoOf(snapshot.structure).name;
     json["size"] = snapshot.size;
-    json["top"] = nodeOrNull(snapshot.top);
+    switch (snapshot.structure) {
+        case StructureKind::Stack:
+            json["top"] = nodeOrNull(snapshot.top);
+            break;
+        case StructureKind::Queue:
+            json["front"] = nodeOrNull(snapshot.front);
+            json["rear"] = nodeOrNull(snapshot.rear);
+            break;
+    }
     json["nodes"] = std::move(nodes);
     return json;
 }
@@ -303,12 +380,22 @@ Json frameJson(const Frame& frame) {
     return json;
 }
 
+Json dataValueJson(const DataField& field) {
+    switch (field.kind) {
+        case DataField::Kind::Integer: return Json(field.integer);
+        case DataField::Kind::Boolean: return Json(field.boolean);
+        case DataField::Kind::Null: return Json(nullptr);
+        case DataField::Kind::IntegerList: return Json(field.list);
+    }
+    return Json(nullptr);
+}
+
 Json resultJson(const Response& response) {
     Json json = Json::object();
     if (response.status.ok()) {
         Json data = Json::object();
         for (const DataField& field : response.data) {
-            data[field.name] = field.value;
+            data[field.name] = dataValueJson(field);
         }
         json["status"] = "ok";
         json["data"] = std::move(data);
@@ -363,7 +450,7 @@ std::string writeResponse(const Echo& echo, const Response& response) {
     addField(out, "schemaVersion", Json(1));
     addField(out, "requestId", echo.requestId ? Json(*echo.requestId) : Json(nullptr));
     addField(out, "structure",
-             knownStructure ? Json(structureName(*echo.structure)) : Json(nullptr));
+             knownStructure ? Json(infoOf(*echo.structure).name) : Json(nullptr));
     addField(out, "operation", echo.operation != nullptr ? Json(echo.operation) : Json(nullptr));
     addField(out, "result", resultJson(response));
     addField(out, "snapshot", knownStructure ? snapshotJson(response.snapshot) : Json(nullptr));

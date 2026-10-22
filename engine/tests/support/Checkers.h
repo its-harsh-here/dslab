@@ -1,8 +1,8 @@
 // Independent checkers used after every operation in the tests.
 //
-// They read only plain data (Snapshot, Response), never the Stack class, so a
-// bug in the algorithm cannot also hide itself in the check. Each returns ""
-// when everything holds, otherwise a sentence naming the first broken rule.
+// They read only plain data (Snapshot, Response), never the structure classes,
+// so a bug in an algorithm cannot also hide itself in the check. Each returns
+// "" when everything holds, otherwise a sentence naming the first broken rule.
 #pragma once
 
 #include <string>
@@ -12,12 +12,17 @@
 
 namespace dslab::test {
 
-// Stack invariants: sizes agree, IDs ascend, links point at listed nodes, and
-// the chain from top reaches every node exactly once and ends at NIL.
-std::string checkStackSnapshot(const Snapshot& snapshot);
+// The structure's wire name, e.g. "queue" (step IDs start with it).
+std::string wireName(StructureKind structure);
+
+// Invariants of a finished operation's snapshot, chosen by its structure:
+// sizes agree, IDs ascend, links point at listed nodes, and the chain from the
+// entry pointer reaches every node exactly once and ends at NIL. A queue's
+// rear is the last node of that chain. Unused entry pointers are NIL.
+std::string checkSnapshot(const Snapshot& snapshot);
 
 // Frame-list invariants of docs/operation-contract.md 6.6 for one response
-// that reached the stack. 'before' is the state before the operation.
+// that reached a structure. 'before' is the state before the operation.
 std::string checkFrames(const Response& response, const Snapshot& before);
 
 }  // namespace dslab::test

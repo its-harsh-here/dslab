@@ -22,6 +22,7 @@ endif()
 add_library(dslab_engine STATIC
   engine/src/Engine.cpp
   engine/src/History.cpp
+  engine/src/Queue.cpp
   engine/src/Stack.cpp
   engine/src/Trace.cpp
   engine/src/json/Protocol.cpp)
@@ -51,9 +52,11 @@ else()
   add_executable(dslab_tests
     engine/tests/test_main.cpp
     engine/tests/test_protocol.cpp
+    engine/tests/test_queue.cpp
     engine/tests/test_stack.cpp
     engine/tests/test_support_classes.cpp
-    engine/tests/support/Checkers.cpp)
+    engine/tests/support/Checkers.cpp
+    engine/tests/support/Run.cpp)
   target_link_libraries(dslab_tests PRIVATE dslab_engine)
   target_include_directories(dslab_tests PRIVATE engine/tests)
   target_include_directories(dslab_tests SYSTEM PRIVATE engine/third_party)

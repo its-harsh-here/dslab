@@ -2,30 +2,23 @@
 // operation (CLAUDE.md, testing rules).
 #include <cstdint>
 #include <limits>
+#include <random>
 #include <string>
 #include <vector>
 
 #include <doctest/doctest.h>
 
 #include "dslab/Engine.h"
-#include "support/Checkers.h"
+#include "support/Run.h"
 
 using namespace dslab;
+using test::events;
 
 namespace {
 
-// Runs one operation, then checks the stack invariants and the frame contract.
+// Runs one stack operation; the shared run() checks invariants and frames.
 Response run(Engine& engine, Operation operation, Value value = 0) {
-    const Snapshot before = engine.snapshot(StructureKind::Stack);
-
-    Request request;
-    request.operation = operation;
-    request.value = value;
-    Response response = engine.apply(request);
-
-    CHECK(test::checkStackSnapshot(response.snapshot) == "");
-    CHECK(test::checkFrames(response, before) == "");
-    return response;
+    return test::run(engine, StructureKind::Stack, operation, value);
 }
 
 Response push(Engine& engine, Value value) { return run(engine, Operation::Push, value); }
@@ -33,41 +26,14 @@ Response pop(Engine& engine) { return run(engine, Operation::Pop); }
 Response peek(Engine& engine) { return run(engine, Operation::Peek); }
 Response clear(Engine& engine) { return run(engine, Operation::Clear); }
 
-// The named field of a successful result, e.g. field(response, "value").
+// The named integer field of a successful result, e.g. field(response, "value").
 std::int64_t field(const Response& response, const std::string& name) {
-    REQUIRE(response.status.ok());
-    for (const DataField& data : response.data) {
-        if (data.name == name) {
-            return data.value;
-        }
-    }
-    FAIL("missing result field " << name);
-    return 0;
-}
-
-std::vector<Event> events(const Response& response) {
-    std::vector<Event> result;
-    for (const Frame& frame : response.frames) {
-        result.push_back(frame.event);
-    }
-    return result;
+    return test::integerData(response, name);
 }
 
 // Values from top to bottom, following the links in a snapshot.
 std::vector<Value> valuesFromTop(const Snapshot& snapshot) {
-    std::vector<Value> values;
-    NodeId current = snapshot.top;
-    while (current != kNoNode && values.size() <= snapshot.nodes.size()) {
-        NodeId next = kNoNode;
-        for (const NodeView& node : snapshot.nodes) {
-            if (node.id == current) {
-                values.push_back(node.value);
-                next = node.next;
-            }
-        }
-        current = next;
-    }
-    return values;
+    return test::chainValues(snapshot, snapshot.top);
 }
 
 }  // namespace
@@ -250,6 +216,47 @@ TEST_CASE("the snapshot operation is read-only") {
     CHECK(events(response) == std::vector<Event>{Event::Begin, Event::Done});
     CHECK(response.frames[1].explanation == "The stack holds 1 node.");
     CHECK(engine.undoCount(StructureKind::Stack) == 1);
+}
+
+TEST_CASE("stack: 10,000 seeded random operations agree with std::vector") {
+    Engine engine;
+    std::vector<Value> oracle;  // allowed as a test oracle (CLAUDE.md, rule 1); back = top
+    std::mt19937 random(20261022);
+
+    for (int step = 0; step < 10000; ++step) {
+        CAPTURE(step);
+        const int choice = static_cast<int>(random() % 100);
+        if (choice < 50) {
+            const Value value = static_cast<Value>(random() % 2001) - 1000;
+            const Response response = push(engine, value);
+            if (oracle.size() < 200) {
+                REQUIRE(response.status.ok());
+                oracle.push_back(value);
+            } else {
+                REQUIRE(response.status.code == ErrorCode::CapacityExceeded);
+            }
+        } else if (choice < 85) {
+            const Response response = pop(engine);
+            if (oracle.empty()) {
+                REQUIRE(response.status.code == ErrorCode::EmptyStructure);
+            } else {
+                REQUIRE(field(response, "value") == oracle.back());
+                oracle.pop_back();
+            }
+        } else if (choice < 99) {
+            const Response response = peek(engine);
+            if (oracle.empty()) {
+                REQUIRE(response.status.code == ErrorCode::EmptyStructure);
+            } else {
+                REQUIRE(field(response, "value") == oracle.back());
+            }
+        } else {
+            REQUIRE(field(clear(engine), "removedCount") == static_cast<std::int64_t>(oracle.size()));
+            oracle.clear();
+        }
+        const std::vector<Value> expectedFromTop(oracle.rbegin(), oracle.rend());
+        REQUIRE(valuesFromTop(engine.snapshot(StructureKind::Stack)) == expectedFromTop);
+    }
 }
 
 TEST_CASE("values at both ends of the 32-bit range round-trip") {

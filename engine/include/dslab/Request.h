@@ -7,13 +7,39 @@
 
 namespace dslab {
 
-enum class Operation { Push, Pop, Peek, Clear, Snapshot };
+enum class Operation {
+    Snapshot,  // shared by every structure
+    // stack
+    Push,
+    Pop,
+    Peek,
+    // queue
+    Enqueue,
+    Dequeue,
+    Front,
+    // shared by every structure
+    Clear
+};
+
+// Operations that change the structure get an undo-history entry when they succeed.
+inline bool isMutating(Operation operation) {
+    switch (operation) {
+        case Operation::Push:
+        case Operation::Pop:
+        case Operation::Enqueue:
+        case Operation::Dequeue:
+        case Operation::Clear:
+            return true;
+        default:
+            return false;
+    }
+}
 
 struct Request {
     std::int32_t requestId = 0;
     StructureKind structure = StructureKind::Stack;
     Operation operation = Operation::Snapshot;
-    Value value = 0;  // used by push only
+    Value value = 0;  // only for operations that take a value
 };
 
 }  // namespace dslab
