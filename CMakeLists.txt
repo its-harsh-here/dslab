@@ -23,6 +23,7 @@ add_library(dslab_engine STATIC
   engine/src/Engine.cpp
   engine/src/History.cpp
   engine/src/Queue.cpp
+  engine/src/SinglyLinkedList.cpp
   engine/src/Stack.cpp
   engine/src/Trace.cpp
   engine/src/json/Protocol.cpp)
@@ -51,6 +52,7 @@ else()
   enable_testing()
   add_executable(dslab_tests
     engine/tests/test_main.cpp
+    engine/tests/test_list.cpp
     engine/tests/test_protocol.cpp
     engine/tests/test_queue.cpp
     engine/tests/test_stack.cpp

@@ -85,13 +85,18 @@ std::string checkLinear(const Snapshot& snapshot) {
     std::vector<NodeId> chain;
     switch (snapshot.structure) {
         case StructureKind::Stack:
-            if (snapshot.front != kNoNode || snapshot.rear != kNoNode) {
-                return "a stack must not use front or rear";
+            if (snapshot.front != kNoNode || snapshot.rear != kNoNode || snapshot.head != kNoNode) {
+                return "a stack must not use front, rear or head";
             }
             return checkChain(snapshot, snapshot.top, "top", chain);
+        case StructureKind::List:
+            if (snapshot.top != kNoNode || snapshot.front != kNoNode || snapshot.rear != kNoNode) {
+                return "a list must not use top, front or rear";
+            }
+            return checkChain(snapshot, snapshot.head, "head", chain);
         case StructureKind::Queue: {
-            if (snapshot.top != kNoNode) {
-                return "a queue must not use top";
+            if (snapshot.top != kNoNode || snapshot.head != kNoNode) {
+                return "a queue must not use top or head";
             }
             const std::string problem = checkChain(snapshot, snapshot.front, "front", chain);
             if (!problem.empty()) {
@@ -113,6 +118,7 @@ std::string wireName(StructureKind structure) {
     switch (structure) {
         case StructureKind::Stack: return "stack";
         case StructureKind::Queue: return "queue";
+        case StructureKind::List: return "list";
     }
     return "unknown";
 }

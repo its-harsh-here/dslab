@@ -1,6 +1,6 @@
-// Layouts of the linear structures: the stack (vertical) and the queue
-// (horizontal).
-import type { QueueSnapshot, StackSnapshot } from '../engine/protocol';
+// Layouts of the linear structures: the stack (vertical), and the queue and
+// list (horizontal).
+import type { ListSnapshot, QueueSnapshot, StackSnapshot } from '../engine/protocol';
 import { chainFrom, type LayoutStrategy, type Point } from './layout';
 
 // ---------------------------------------------------------------------------
@@ -72,4 +72,44 @@ export const queueLayout: LayoutStrategy<QueueSnapshot> = {
   },
 
   box: { ...CHAIN_NODE, padLeft: 24, padRight: 110, padTop: 56, padBottom: 72 },
+};
+
+// ---------------------------------------------------------------------------
+// Singly linked list: drawn left to right from head. TAIL marks the last
+// reachable node; the list itself stores only head.
+
+const LIST_STAGING_Y = 150;
+
+export const listLayout: LayoutStrategy<ListSnapshot> = {
+  reachable: (snapshot) => new Set(chainFrom(snapshot.nodes, snapshot.head)),
+
+  pack(snapshot) {
+    const positions = new Map<number, Point>();
+    chainFrom(snapshot.nodes, snapshot.head).forEach((id, index) => {
+      positions.set(id, { x: index * CHAIN_SLOT, y: 0 });
+    });
+    return positions;
+  },
+
+  // Below the gap after "prev" (insert in the middle), else below the head.
+  staging(frame, placed) {
+    for (const id of Object.values(frame.pointers)) {
+      const at = id === null ? undefined : placed.get(id);
+      if (at) return { x: at.x + CHAIN_SLOT / 2, y: LIST_STAGING_Y };
+    }
+    const head = frame.snapshot.head === null ? undefined : placed.get(frame.snapshot.head);
+    return head ? { x: head.x, y: LIST_STAGING_Y } : { x: 0, y: LIST_STAGING_Y };
+  },
+
+  markers(snapshot, nodes) {
+    const chain = chainFrom(snapshot.nodes, snapshot.head);
+    const head = chain.length > 0 ? nodes.get(chain[0]) : undefined;
+    const tail = chain.length > 0 ? nodes.get(chain[chain.length - 1]) : undefined;
+    return new Map([
+      ['HEAD', head ?? { x: 0, y: 0 }],
+      ['TAIL', tail ?? { x: 0, y: 0 }],
+    ]);
+  },
+
+  box: { ...CHAIN_NODE, padLeft: 24, padRight: 110, padTop: 56, padBottom: 86 },
 };

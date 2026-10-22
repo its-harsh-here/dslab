@@ -5,7 +5,7 @@
 export const SCHEMA_VERSION = 1;
 
 /** The structures this build of the engine implements, in tab order. */
-export const STRUCTURES = ['stack', 'queue'] as const;
+export const STRUCTURES = ['stack', 'queue', 'list'] as const;
 export type StructureName = (typeof STRUCTURES)[number];
 
 export type NodeId = number;
@@ -32,7 +32,14 @@ export interface QueueSnapshot {
   readonly nodes: readonly LinearNode[];
 }
 
-export type Snapshot = StackSnapshot | QueueSnapshot;
+export interface ListSnapshot {
+  readonly structure: 'list';
+  readonly size: number;
+  readonly head: NodeId | null;
+  readonly nodes: readonly LinearNode[];
+}
+
+export type Snapshot = StackSnapshot | QueueSnapshot | ListSnapshot;
 
 export type EventName =
   | 'begin' | 'compare' | 'move' | 'visit' | 'read' | 'found' | 'notFound'

@@ -14,19 +14,23 @@ using NodeId = std::int32_t;
 constexpr NodeId kNoNode = 0;
 
 // The structures this engine implements. AVL and red-black trees come later.
-enum class StructureKind { Stack, Queue };
+enum class StructureKind { Stack, Queue, List };
 
 // Stack, queue and list nodes link with "next"; tree nodes with left/right/parent.
 inline bool isLinear(StructureKind structure) {
-    return structure == StructureKind::Stack || structure == StructureKind::Queue;
+    return structure == StructureKind::Stack || structure == StructureKind::Queue ||
+           structure == StructureKind::List;
 }
 
 // What one frame shows (operation-contract.md, section 6.2).
 // Only the events used so far exist.
 enum class Event {
-    Begin,   // first frame: the state before anything happened
-    Move,    // a cursor variable moved to a node
-    Read,    // a value was read without changing anything
+    Begin,     // first frame: the state before anything happened
+    Compare,   // a value was compared with a node's value
+    Move,      // a cursor variable moved to a node
+    Read,      // a value was read without changing anything
+    Found,     // a search found what it looked for
+    NotFound,  // a search reached NIL
     Create,  // a node was allocated (not linked yet)
     Link,    // a link or entry pointer was set to a node
     Unlink,  // a link or entry pointer was set to NIL

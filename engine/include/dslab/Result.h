@@ -21,6 +21,8 @@ enum class ErrorCode {
     CapacityExceeded,
     IdExhausted,
     EmptyStructure,
+    IndexOutOfRange,
+    NodeNotFound,
     // Should never happen.
     InternalError
 };

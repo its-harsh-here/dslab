@@ -94,10 +94,17 @@ function describeResult(operation: string | null, data: Readonly<Record<string, 
   switch (operation) {
     case 'push':
     case 'enqueue':
+    case 'insertAt':
       return `${operation} → created node #${data.nodeId}`;
     case 'pop':
     case 'dequeue':
+    case 'deleteNode':
       return `${operation} → removed ${data.value} (node #${data.nodeId})`;
+    case 'search':
+      if (!data.found) return 'search → not found';
+      return `search → found node #${data.nodeId}` + (typeof data.index === 'number' ? ` at index ${data.index}` : '');
+    case 'reverse':
+      return 'reverse → done';
     case 'peek':
     case 'front':
       return `${operation} → ${data.value} (node #${data.nodeId})`;

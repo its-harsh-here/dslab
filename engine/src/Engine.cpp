@@ -17,6 +17,7 @@ const char* displayName(StructureKind structure) {
     switch (structure) {
         case StructureKind::Stack: return "stack";
         case StructureKind::Queue: return "queue";
+        case StructureKind::List: return "list";
     }
     return "structure";
 }
@@ -46,6 +47,7 @@ Response Engine::apply(const Request& request) {
         switch (request.structure) {
             case StructureKind::Stack: outcome = runStack(request, trace); break;
             case StructureKind::Queue: outcome = runQueue(request, trace); break;
+            case StructureKind::List: outcome = runList(request, trace); break;
         }
     }
 
@@ -118,10 +120,44 @@ Engine::Outcome Engine::runQueue(const Request& request, Trace& trace) {
     }
 }
 
+Engine::Outcome Engine::runList(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::InsertAt: {
+            const Result<NodeId> result = list_.insertAt(request.index, request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::DeleteNode: {
+            const Result<NodeValue> result = list_.deleteNode(request.nodeId, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<ListSearchResult> result = list_.search(request.value, trace);
+            const ListSearchResult& found = result.data;
+            if (!found.found) {
+                return {result.status, {booleanField("found", false), nullField("nodeId"), nullField("index")}};
+            }
+            return {result.status,
+                    {booleanField("found", true), integerField("nodeId", found.nodeId),
+                     integerField("index", found.index)}};
+        }
+        case Operation::Reverse:
+            return {list_.reverse(trace), {}};
+        case Operation::Clear: {
+            const Result<int> result = list_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
 Snapshot Engine::snapshot(StructureKind structure) const {
     switch (structure) {
         case StructureKind::Stack: return stack_.snapshot();
         case StructureKind::Queue: return queue_.snapshot();
+        case StructureKind::List: return list_.snapshot();
     }
     return Snapshot{};
 }
@@ -138,6 +174,7 @@ History& Engine::history(StructureKind structure) {
     switch (structure) {
         case StructureKind::Stack: return stackHistory_;
         case StructureKind::Queue: return queueHistory_;
+        case StructureKind::List: return listHistory_;
     }
     return stackHistory_;
 }
@@ -146,6 +183,7 @@ const History& Engine::history(StructureKind structure) const {
     switch (structure) {
         case StructureKind::Stack: return stackHistory_;
         case StructureKind::Queue: return queueHistory_;
+        case StructureKind::List: return listHistory_;
     }
     return stackHistory_;
 }

@@ -17,6 +17,11 @@ enum class Operation {
     Enqueue,
     Dequeue,
     Front,
+    // list
+    InsertAt,
+    DeleteNode,
+    Search,
+    Reverse,
     // shared by every structure
     Clear
 };
@@ -28,6 +33,9 @@ inline bool isMutating(Operation operation) {
         case Operation::Pop:
         case Operation::Enqueue:
         case Operation::Dequeue:
+        case Operation::InsertAt:
+        case Operation::DeleteNode:
+        case Operation::Reverse:
         case Operation::Clear:
             return true;
         default:
@@ -39,7 +47,10 @@ struct Request {
     std::int32_t requestId = 0;
     StructureKind structure = StructureKind::Stack;
     Operation operation = Operation::Snapshot;
-    Value value = 0;  // only for operations that take a value
+    // Arguments; each operation uses only its own.
+    Value value = 0;
+    std::int32_t index = 0;
+    NodeId nodeId = kNoNode;
 };
 
 }  // namespace dslab

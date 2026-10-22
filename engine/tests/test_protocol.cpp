@@ -102,13 +102,25 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         {"value just below the range", pushRequest("-2147483649"), "VALUE_OUT_OF_RANGE", true},
         {"request over 1 MiB", pushRequest("1") + std::string(1024 * 1024, ' '), "BAD_REQUEST",
          false},
+        {"list index out of the 32-bit range",
+         R"({"schemaVersion":1,"requestId":1,"structure":"list","operation":"insertAt","args":{"index":4294967296,"value":1}})",
+         "VALUE_OUT_OF_RANGE", true},
+        {"list insert without an index",
+         R"({"schemaVersion":1,"requestId":1,"structure":"list","operation":"insertAt","args":{"value":1}})",
+         "BAD_REQUEST", true},
+        {"list delete with a value instead of a node ID",
+         R"({"schemaVersion":1,"requestId":1,"structure":"list","operation":"deleteNode","args":{"value":1}})",
+         "BAD_REQUEST", true},
     };
 
     for (const Case& c : cases) {
         CAPTURE(c.name);
         Engine engine;
-        send(engine, pushRequest("10"));  // some state that must survive the error
-        const Json before = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"stack","operation":"snapshot","args":{}})");
+        // Some state that must survive the error, in each structure the cases use.
+        send(engine, pushRequest("10"));
+        send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"list","operation":"insertAt","args":{"index":0,"value":10}})");
+        const Json stackBefore = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"stack","operation":"snapshot","args":{}})");
+        const Json listBefore = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"list","operation":"snapshot","args":{}})");
 
         const Json response = send(engine, c.request);
         CHECK(response["schemaVersion"] == 1);
@@ -116,7 +128,9 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         CHECK(response["result"]["code"] == c.code);
         CHECK(response["frames"] == Json::array());
         if (c.structureKnown) {
-            CHECK(response["structure"] == "stack");
+            const std::string structure = Json::parse(c.request)["structure"];
+            const Json& before = (structure == "list") ? listBefore : stackBefore;
+            CHECK(response["structure"] == structure);
             CHECK(response["snapshot"] == before["snapshot"]);
             CHECK(response["history"] == before["history"]);
         } else {

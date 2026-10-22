@@ -157,6 +157,63 @@ Duplicates allowed. `search` returns the first match from `head`. `insertAt` wit
 index = n appends. `reverse` is the iterative three-pointer reversal (`prev`, `curr`,
 `next`). It is valid on empty and one-node lists.
 
+The list stores only `head`. The page draws a **TAIL** marker at the last node reachable
+from `head` for readability. It is a display marker, not a pointer, so appending still
+walks the whole list (O(n)). Explanations name a node as `#id (value)` where duplicates
+could make a value ambiguous.
+
+Step IDs (the same listings are comments in `engine/src/SinglyLinkedList.cpp`):
+
+```
+insertAt(index, value):                                  list.insertAt.enter
+  if size = 200: reject CAPACITY_EXCEEDED                list.insertAt.full
+  if index < 0 or index > size: reject INDEX_OUT_OF_RANGE  list.insertAt.badIndex
+  if index = 0:
+    node <- new Node(value)                              list.insertAt.create
+    node.next <- head                                    list.insertAt.linkNext
+    head <- node                                         list.insertAt.linkHead
+  else:
+    prev <- head                                         list.insertAt.start   (move)
+    repeat index - 1 times: prev <- prev.next            list.insertAt.walk    (move)
+    node <- new Node(value)                              list.insertAt.create
+    node.next <- prev.next                               list.insertAt.linkNext
+    prev.next <- node                                    list.insertAt.linkPrev
+  return node                                            list.insertAt.done
+
+deleteNode(id):                                          list.deleteNode.enter
+  if no node has this ID: reject NODE_NOT_FOUND          list.deleteNode.missing
+  if head is the node:
+    node <- head                                         list.deleteNode.atHead   (found)
+    head <- node.next                                    list.deleteNode.moveHead
+  else:
+    prev <- head                                         list.deleteNode.start    (move)
+    while prev.next is not the node: prev <- prev.next   list.deleteNode.walk     (move)
+    node <- prev.next                                    list.deleteNode.found    (found)
+    prev.next <- node.next                               list.deleteNode.bypass
+  delete node                                            list.deleteNode.remove
+  return                                                 list.deleteNode.done
+
+search(value):                                           list.search.enter
+  curr <- head; index <- 0
+  while curr != NIL:
+    if curr.value = value: found                         list.search.found    (found)
+    curr <- curr.next; index <- index + 1                list.search.next     (compare)
+  not found                                              list.search.notFound (notFound)
+  return                                                 list.search.done
+
+reverse():                                               list.reverse.enter
+  prev <- NIL; curr <- head
+  while curr != NIL:
+    next <- curr.next; curr.next <- prev                 list.reverse.flip    (one frame per node)
+    prev <- curr; curr <- next
+  head <- prev                                           list.reverse.moveHead
+  return                                                 list.reverse.done
+
+clear():                                                 list.clear.enter
+  while head != NIL: node <- head; head <- node.next; delete node   list.clear.remove
+  return removed                                         list.clear.done
+```
+
 ### 2.4 Ordinary binary tree (`root`, nodes have `parent`)
 
 | Operation | Args | Mutates | Errors | Success `data` | Algorithm |

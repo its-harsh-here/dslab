@@ -54,6 +54,18 @@ public:
         }
     }
 
+    // The node with this ID, or nullptr. A linear search: n is at most 200, and
+    // this is support work (finding the node the user selected), not part of
+    // the algorithm being taught.
+    Node* find(NodeId id) const {
+        for (const std::unique_ptr<Node>& node : nodes_) {
+            if (node->id == id) {
+                return node.get();
+            }
+        }
+        return nullptr;
+    }
+
     int size() const { return static_cast<int>(nodes_.size()); }
 
     // Every owned node, in ascending ID order (used to build snapshots).

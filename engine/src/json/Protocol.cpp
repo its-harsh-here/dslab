@@ -28,7 +28,41 @@ using Json = nlohmann::ordered_json;
 enum ArgFlag : unsigned {
     kNoArgs = 0,
     kValueArg = 1,
+    kIndexArg = 2,
+    kNodeIdArg = 4,
 };
+
+// The integer arguments, in the order they are checked.
+struct IntegerArg {
+    ArgFlag flag;
+    const char* name;
+};
+
+const IntegerArg kIntegerArgs[] = {
+    {kIndexArg, "index"},
+    {kValueArg, "value"},
+    {kNodeIdArg, "nodeId"},
+};
+
+// The flag of the argument called 'name', or kNoArgs when there is none.
+unsigned argFlag(const std::string& name) {
+    for (const IntegerArg& arg : kIntegerArgs) {
+        if (name == arg.name) {
+            return arg.flag;
+        }
+    }
+    return kNoArgs;
+}
+
+// Puts a checked integer argument into its field of the request.
+void storeInteger(Request& request, ArgFlag flag, std::int32_t number) {
+    switch (flag) {
+        case kValueArg: request.value = number; break;
+        case kIndexArg: request.index = number; break;
+        case kNodeIdArg: request.nodeId = number; break;
+        case kNoArgs: break;
+    }
+}
 
 struct OperationInfo {
     const char* name;
@@ -55,6 +89,13 @@ const std::vector<StructureInfo>& structureTable() {
          {{"enqueue", Operation::Enqueue, kValueArg},
           {"dequeue", Operation::Dequeue, kNoArgs},
           {"front", Operation::Front, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs}}},
+        {"list", "list", StructureKind::List,
+         {{"insertAt", Operation::InsertAt, kIndexArg | kValueArg},
+          {"deleteNode", Operation::DeleteNode, kNodeIdArg},
+          {"search", Operation::Search, kValueArg},
+          {"reverse", Operation::Reverse, kNoArgs},
           {"clear", Operation::Clear, kNoArgs},
           {"snapshot", Operation::Snapshot, kNoArgs}}},
     };
@@ -103,8 +144,11 @@ std::string joinNames(const std::vector<std::string>& names) {
 const char* eventName(Event event) {
     switch (event) {
         case Event::Begin: return "begin";
+        case Event::Compare: return "compare";
         case Event::Move: return "move";
         case Event::Read: return "read";
+        case Event::Found: return "found";
+        case Event::NotFound: return "notFound";
         case Event::Create: return "create";
         case Event::Link: return "link";
         case Event::Unlink: return "unlink";
@@ -126,6 +170,8 @@ const char* errorCodeName(ErrorCode code) {
         case ErrorCode::CapacityExceeded: return "CAPACITY_EXCEEDED";
         case ErrorCode::IdExhausted: return "ID_EXHAUSTED";
         case ErrorCode::EmptyStructure: return "EMPTY_STRUCTURE";
+        case ErrorCode::IndexOutOfRange: return "INDEX_OUT_OF_RANGE";
+        case ErrorCode::NodeNotFound: return "NODE_NOT_FOUND";
         case ErrorCode::InternalError: return "INTERNAL_ERROR";
     }
     return "INTERNAL_ERROR";
@@ -293,22 +339,26 @@ ParsedRequest parseRequest(const std::string& text) {
         return fail(parsed, ErrorCode::BadRequest, "\"args\" must be an object.");
     }
     for (const auto& item : args.items()) {
-        const bool allowed = (item.key() == "value" && (operation->args & kValueArg) != 0);
-        if (!allowed) {
+        if ((operation->args & argFlag(item.key())) == 0) {
             return fail(parsed, ErrorCode::BadRequest,
                         std::string(operation->name) + " has no argument " + mention(item.key()) + ".");
         }
     }
-    if ((operation->args & kValueArg) != 0) {
-        if (member(args, "value") == nullptr) {
-            return fail(parsed, ErrorCode::BadRequest,
-                        std::string(operation->name) + " needs the argument \"value\".");
+    for (const IntegerArg& arg : kIntegerArgs) {
+        if ((operation->args & arg.flag) == 0) {
+            continue;
         }
-        const Status status = readInteger(args, "value", parsed.request.value);
+        if (member(args, arg.name) == nullptr) {
+            return fail(parsed, ErrorCode::BadRequest,
+                        std::string(operation->name) + " needs the argument \"" + arg.name + "\".");
+        }
+        std::int32_t number = 0;
+        const Status status = readInteger(args, arg.name, number);
         if (!status.ok()) {
             parsed.status = status;
             return parsed;
         }
+        storeInteger(parsed.request, arg.flag, number);
     }
 
     parsed.status = okStatus();
@@ -343,6 +393,9 @@ Json snapshotJson(const Snapshot& snapshot) {
         case StructureKind::Queue:
             json["front"] = nodeOrNull(snapshot.front);
             json["rear"] = nodeOrNull(snapshot.rear);
+            break;
+        case StructureKind::List:
+            json["head"] = nodeOrNull(snapshot.head);
             break;
     }
     json["nodes"] = std::move(nodes);

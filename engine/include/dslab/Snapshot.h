@@ -25,6 +25,7 @@ struct Snapshot {
     NodeId top = kNoNode;    // stack
     NodeId front = kNoNode;  // queue
     NodeId rear = kNoNode;   // queue
+    NodeId head = kNoNode;   // list
 
     std::vector<NodeView> nodes;  // every owned node, in ascending ID order
 };
@@ -39,7 +40,7 @@ inline bool operator!=(const NodeView& a, const NodeView& b) {
 
 inline bool operator==(const Snapshot& a, const Snapshot& b) {
     return a.structure == b.structure && a.size == b.size && a.top == b.top &&
-           a.front == b.front && a.rear == b.rear && a.nodes == b.nodes;
+           a.front == b.front && a.rear == b.rear && a.head == b.head && a.nodes == b.nodes;
 }
 
 inline bool operator!=(const Snapshot& a, const Snapshot& b) {
