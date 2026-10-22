@@ -1,0 +1,3 @@
+# Keep LF line endings in the repository and the working tree, even when a
+# machine has core.autocrlf=true (CRLF breaks shell scripts on Linux).
+* text=auto eol=lf

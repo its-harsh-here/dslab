@@ -1,0 +1,273 @@
+{
+  "source": "docs/operation-contract.md, section 7.1",
+  "setup": [
+    {
+      "schemaVersion": 1,
+      "requestId": 1,
+      "structure": "stack",
+      "operation": "push",
+      "args": {
+        "value": 10
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "requestId": 2,
+      "structure": "stack",
+      "operation": "push",
+      "args": {
+        "value": 20
+      }
+    }
+  ],
+  "request": {
+    "schemaVersion": 1,
+    "requestId": 3,
+    "structure": "stack",
+    "operation": "push",
+    "args": {
+      "value": 30
+    }
+  },
+  "response": {
+    "schemaVersion": 1,
+    "requestId": 3,
+    "structure": "stack",
+    "operation": "push",
+    "result": {
+      "status": "ok",
+      "data": {
+        "nodeId": 3
+      }
+    },
+    "snapshot": {
+      "structure": "stack",
+      "size": 3,
+      "top": 3,
+      "nodes": [
+        {
+          "id": 1,
+          "value": 10,
+          "next": null
+        },
+        {
+          "id": 2,
+          "value": 20,
+          "next": 1
+        },
+        {
+          "id": 3,
+          "value": 30,
+          "next": 2
+        }
+      ]
+    },
+    "frames": [
+      {
+        "index": 0,
+        "event": "begin",
+        "stepId": "stack.push.enter",
+        "explanation": "Push 30 onto a stack that holds 2 nodes.",
+        "highlight": {
+          "nodes": [],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "stack",
+          "size": 2,
+          "top": 2,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 10,
+              "next": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "next": 1
+            }
+          ]
+        }
+      },
+      {
+        "index": 1,
+        "event": "create",
+        "stepId": "stack.push.create",
+        "explanation": "Create a new node holding 30.",
+        "highlight": {
+          "nodes": [
+            3
+          ],
+          "edges": []
+        },
+        "pointers": {
+          "node": 3
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "stack",
+          "size": 3,
+          "top": 2,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 10,
+              "next": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "next": 1
+            },
+            {
+              "id": 3,
+              "value": 30,
+              "next": null
+            }
+          ]
+        }
+      },
+      {
+        "index": 2,
+        "event": "link",
+        "stepId": "stack.push.linkNext",
+        "explanation": "Point the new node's next at the current top, 20.",
+        "highlight": {
+          "nodes": [
+            3,
+            2
+          ],
+          "edges": [
+            "3->2"
+          ]
+        },
+        "pointers": {
+          "node": 3
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "stack",
+          "size": 3,
+          "top": 2,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 10,
+              "next": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "next": 1
+            },
+            {
+              "id": 3,
+              "value": 30,
+              "next": 2
+            }
+          ]
+        }
+      },
+      {
+        "index": 3,
+        "event": "link",
+        "stepId": "stack.push.moveTop",
+        "explanation": "Move top to the new node, so 30 is now on top.",
+        "highlight": {
+          "nodes": [
+            3
+          ],
+          "edges": []
+        },
+        "pointers": {
+          "node": 3
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "stack",
+          "size": 3,
+          "top": 3,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 10,
+              "next": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "next": 1
+            },
+            {
+              "id": 3,
+              "value": 30,
+              "next": 2
+            }
+          ]
+        }
+      },
+      {
+        "index": 4,
+        "event": "done",
+        "stepId": "stack.push.done",
+        "explanation": "Pushed 30; the stack now holds 3 nodes.",
+        "highlight": {
+          "nodes": [
+            3
+          ],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "stack",
+          "size": 3,
+          "top": 3,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 10,
+              "next": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "next": 1
+            },
+            {
+              "id": 3,
+              "value": 30,
+              "next": 2
+            }
+          ]
+        }
+      }
+    ],
+    "metrics": {
+      "algorithm": {
+        "comparisons": 0,
+        "nodesVisited": 0,
+        "linksChanged": 2,
+        "rotations": 0,
+        "recolors": 0
+      },
+      "trace": {
+        "frames": 5,
+        "snapshotNodes": 14,
+        "truncated": false
+      }
+    },
+    "history": {
+      "undo": 3,
+      "redo": 0
+    }
+  }
+}

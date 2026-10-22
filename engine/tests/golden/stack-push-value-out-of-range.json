@@ -1,0 +1,49 @@
+{
+  "source": "docs/operation-contract.md, section 5.3",
+  "setup": [],
+  "request": {
+    "schemaVersion": 1,
+    "requestId": 9,
+    "structure": "stack",
+    "operation": "push",
+    "args": {
+      "value": 3000000000
+    }
+  },
+  "response": {
+    "schemaVersion": 1,
+    "requestId": 9,
+    "structure": "stack",
+    "operation": "push",
+    "result": {
+      "status": "error",
+      "code": "VALUE_OUT_OF_RANGE",
+      "message": "The value 3000000000 is outside the 32-bit signed integer range."
+    },
+    "snapshot": {
+      "structure": "stack",
+      "size": 0,
+      "top": null,
+      "nodes": []
+    },
+    "frames": [],
+    "metrics": {
+      "algorithm": {
+        "comparisons": 0,
+        "nodesVisited": 0,
+        "linksChanged": 0,
+        "rotations": 0,
+        "recolors": 0
+      },
+      "trace": {
+        "frames": 0,
+        "snapshotNodes": 0,
+        "truncated": false
+      }
+    },
+    "history": {
+      "undo": 0,
+      "redo": 0
+    }
+  }
+}

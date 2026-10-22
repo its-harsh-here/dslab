@@ -1,0 +1,215 @@
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --muted: #59636e;
+  --line: #8c959f;
+  --node-fill: #f6f8fa;
+  --node-stroke: #57606a;
+  --accent: #0969da;
+  --accent-fill: #ddf4ff;
+  --error: #cf222e;
+  --error-fill: #ffebe9;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --line: #6e7681;
+    --node-fill: #161b22;
+    --node-stroke: #8b949e;
+    --accent: #4493f8;
+    --accent-fill: #12263d;
+    --error: #f85149;
+    --error-fill: #2d1214;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 24px 0 12px;
+}
+
+.subtitle,
+.step-info {
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls input {
+  width: 10rem;
+  padding: 6px 8px;
+  font: inherit;
+}
+
+.controls button {
+  padding: 6px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.input-error {
+  color: var(--error);
+  margin: 6px 0 0;
+}
+
+/* The drawing sits at the bottom of a scrollable area, so a growing stack
+   extends upwards and the top of the stack is what you see first. */
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  max-height: 65vh;
+  overflow: auto;
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.stack-svg {
+  margin-top: auto;
+  align-self: center;
+  flex: none;
+}
+
+.node rect {
+  fill: var(--node-fill);
+  stroke: var(--node-stroke);
+  stroke-width: 1.5;
+}
+
+.node.highlighted rect {
+  fill: var(--accent-fill);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.node.detached rect {
+  stroke-dasharray: 5 4;
+}
+
+.node-value {
+  fill: var(--text);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.node-id {
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.edge,
+.null-link line,
+.top-marker line {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.edge.highlighted {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.arrow-head {
+  fill: var(--line);
+}
+
+.null-link text,
+.null-text {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.top-marker text {
+  fill: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.top-marker .null-text {
+  font-weight: 400;
+}
+
+.pointer-label {
+  fill: var(--accent);
+  font-size: 13px;
+}
+
+.explanation {
+  font-size: 1.1rem;
+  margin: 16px 0 0;
+  min-height: 1.5em;
+}
+
+.result {
+  margin: 12px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.error {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--error);
+  background: var(--error-fill);
+}
+
+.loading {
+  margin-top: 24px;
+}
+
+.load-error {
+  margin-top: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--error);
+  border-radius: 8px;
+  background: var(--error-fill);
+}
+
+.load-error h2 {
+  margin-top: 0;
+  color: var(--error);
+}
+
+.load-error dt {
+  font-weight: 600;
+}
+
+.load-error dd {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}

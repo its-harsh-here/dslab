@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Native (CMake) and WebAssembly (Emscripten) build folders. Never commit build output.
+build/
+build-*/
+cmake-build-*/
+out/
+*.wasm
+# Emscripten output copied next to the web sources by npm run build:wasm
+web/src/generated/
+
+# Vite production build
+dist/
+*.tsbuildinfo
+
+# Playwright output
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright-mcp/
+
+# Environment files (keep the example)
+.env
+.env.*
+!.env.example
+
+# Editor, OS and personal tool files
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
+
+# Logs
+npm-debug.log*
+*.log
