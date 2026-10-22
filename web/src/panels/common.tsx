@@ -102,6 +102,7 @@ function describeResult(operation: string | null, data: Readonly<Record<string, 
     case 'pop':
     case 'dequeue':
     case 'deleteNode':
+    case 'delete':
       return `${operation} → removed ${data.value} (node #${data.nodeId})`;
     case 'search':
       if (!data.found) return 'search → not found';

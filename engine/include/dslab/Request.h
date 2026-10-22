@@ -17,7 +17,7 @@ enum class Operation {
     Enqueue,
     Dequeue,
     Front,
-    // list
+    // list (Search is also the BST's)
     InsertAt,
     DeleteNode,
     Search,
@@ -26,6 +26,9 @@ enum class Operation {
     AddRoot,
     AddChild,
     DeleteSubtree,
+    // BST
+    Insert,
+    Delete,
     // trees
     Preorder,
     Inorder,
@@ -48,6 +51,8 @@ inline bool isMutating(Operation operation) {
         case Operation::AddRoot:
         case Operation::AddChild:
         case Operation::DeleteSubtree:
+        case Operation::Insert:
+        case Operation::Delete:
         case Operation::Clear:
             return true;
         default:

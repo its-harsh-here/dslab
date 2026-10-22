@@ -5,7 +5,7 @@
 export const SCHEMA_VERSION = 1;
 
 /** The structures this build of the engine implements, in tab order. */
-export const STRUCTURES = ['stack', 'queue', 'list', 'binaryTree'] as const;
+export const STRUCTURES = ['stack', 'queue', 'list', 'binaryTree', 'bst'] as const;
 export type StructureName = (typeof STRUCTURES)[number];
 
 export type NodeId = number;

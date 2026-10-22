@@ -40,7 +40,8 @@ std::string pushRequest(const std::string& valueText, int requestId = 1) {
 
 TEST_CASE("golden files from the operation contract") {
     // Compared as ordered JSON: key order matters, whitespace does not.
-    for (const char* name : {"stack-push-30.json", "stack-push-value-out-of-range.json"}) {
+    for (const char* name : {"stack-push-30.json", "stack-push-value-out-of-range.json", "bst-insert-25.json",
+                             "bst-snapshot-empty.json"}) {
         CAPTURE(name);
         const Json golden = Json::parse(readFile(std::string(DSLAB_GOLDEN_DIR) + "/" + name));
 

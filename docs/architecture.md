@@ -72,11 +72,12 @@ The file list is the plan for milestone 2 onward; update it when files change.
 | `Request.h`, `Response.h` | Plain C++ request and response types (no JSON). |
 | `Engine.h/.cpp` | Owns one instance of each structure plus its `History`. `Response apply(const Request&)` dispatches with plain `switch` statements. |
 
-**Status after milestone 2:** `Limits`, `Types`, `Result`, `Snapshot`, `Frame`, `Trace`,
-`NodePool`, `History` (recording only), `Request`, `Response`, `Engine` and `Stack` exist.
-`NodeView` and `Snapshot` hold only the stack's fields so far, and the enums list only
-what the stack uses. Each later structure adds its own. `Catalog` and `TreeTraversal` do
-not exist yet.
+**Status after milestone 3:** `Limits`, `Types`, `Result`, `Snapshot`, `Frame`, `Trace`,
+`NodePool`, `History` (recording only), `Request`, `Response`, `Engine`, `TreeTraversal`
+and five structures (`Stack`, `Queue`, `SinglyLinkedList`, `BinaryTree`, `Bst`) exist.
+`Catalog` does not exist yet. The enums list only what is used so far; AVL and red-black
+add their own. `Engine::apply` takes the snapshot for history, then dispatches with one
+`run<Structure>()` function per structure.
 
 Every structure class has the same shape:
 
@@ -157,14 +158,14 @@ React 19, TypeScript, Vite 8. `web/index.html` is the Vite root page.
 
 | Folder | Responsibility |
 | --- | --- |
-| `web/src/main.tsx`, `App.tsx` | Mount the app in `<StrictMode>`; loading, load-error and ready states. Tabs (one per structure) come with the second structure. |
+| `web/src/main.tsx`, `App.tsx` | Mount the app in `<StrictMode>`; loading, load-error and ready states; one tab per structure (`#queue` etc. in the URL selects a tab). Every panel stays mounted, so each keeps its picture while hidden. |
 | `web/src/engine/` | `loadEngine.ts` (loads Wasm once; section 4), `client.ts` (`send(...) → EngineResponse`, stringify/parse, schema-version check), `protocol.ts` (hand-written read-only TypeScript types that mirror operation-contract.md). |
 | `web/src/generated/` | Emscripten output: `dslab_engine.mjs`, `dslab_engine.wasm`, `dslab_engine.d.mts`. Build output: gitignored, never edited, never committed. |
-| `web/src/state/` | Not created yet: `StackPanel` keeps its own state with `useState`. A reducer for several tabs arrives with them. |
-| `web/src/playback/` | `animation.ts` turns one response's frames into a timed animation (one frame every ≤ 550 ms, about 3 s per operation; moves are skipped under reduced motion). `useAnimationClock.ts` drives it with `requestAnimationFrame`. Play/pause/step/scrub controls come in milestone 6. |
-| `web/src/layout/` | `stackLayout.ts`: positions from a frame and the previous positions (section 3.2), plus interpolation between two layouts. |
-| `web/src/render/` | `StackSvg.tsx`: nodes keyed by node ID (`data-node-id`), `next` edges keyed by edge ID, the TOP marker, pointer labels, highlights, and dashed outlines for nodes not reachable from `top`. |
-| `web/src/panels/` | `StackPanel.tsx` (value box, Push/Pop/Peek/Clear, explanation, step counter, result or typed error) and `EngineLoadErrorView.tsx`. Pseudocode, metrics, undo/redo and import/export panels come later. |
+| `web/src/state/` | Not created: each panel keeps its own state through `useStructure`, which was enough so far. |
+| `web/src/playback/` | `useStructure.ts` (one tab's connection to the engine: `send()`, the latest response, the animation), `animation.ts` (one response's frames as a timed animation, one frame every ≤ 550 ms, moves skipped under reduced motion), `useAnimationClock.ts` (drives it with `requestAnimationFrame`). Play/pause/step/scrub controls come in milestone 6. |
+| `web/src/layout/` | `layout.ts`: the layout rule of section 3.2, interpolation and the viewBox. `linear.ts`: stack, queue and list strategies. `tree.ts`: binary tree and BST (x = in-order rank, y = depth). |
+| `web/src/render/` | `parts.tsx` (per-drawing arrow markers, box nodes, selectable nodes, pointer labels), `StackSvg.tsx`, `ChainSvg.tsx` (queue and list: FRONT/REAR, HEAD/TAIL, index labels), `TreeSvg.tsx` (L/R edge labels, ROOT marker). Nodes are keyed by node ID (`data-node-id`), edges by edge ID; nodes not reachable from the entry pointer are dashed. |
+| `web/src/panels/` | One panel per structure, `common.tsx` (integer input, step report, result line), `TraversalButtons.tsx`, `EngineLoadErrorView.tsx`. Selection is always by node ID. Pseudocode, metrics, undo/redo and import/export panels come later. |
 | `web/e2e/` | Not created yet. Milestone 2 was checked by hand with the Playwright MCP browser (bundled Chromium only). |
 
 Two React rules matter here, both from the React docs:

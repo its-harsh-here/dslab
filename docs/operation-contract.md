@@ -296,8 +296,49 @@ order records n + 2. Level order uses a plain array as its queue, never `std::qu
   **in-order successor** (the minimum of its right subtree). The successor **node itself
   is relinked** into the deleted node's place; values are never copied between nodes, so
   every value keeps its ID. The deleted node's ID disappears.
-- `search`: iterative.
+- `search`: iterative. Every search frame highlights the whole path taken so far
+  (nodes and edges), so the final frame shows the actual path.
 - h ≤ n − 1, so a degenerate BST costs O(n).
+
+Delete and search step IDs (insert is listed in 7.2; the same listings are comments in
+`engine/src/Bst.cpp`):
+
+```
+delete(value):                                       bst.delete.enter
+  z <- root
+  while z != NIL and value != z.value:               bst.delete.goLeft / goRight   (compare)
+    z <- (value < z.value) ? z.left : z.right
+  if z = NIL: reject VALUE_NOT_FOUND                 bst.delete.notFound
+  name the case:                                     bst.delete.caseLeaf          (case 1, no children)
+                                                     bst.delete.caseOneChild      (case 2)
+                                                     bst.delete.caseTwoChildren   (case 3)
+  if z.left = NIL: transplant(z, z.right)            bst.delete.replace
+  else if z.right = NIL: transplant(z, z.left)       bst.delete.replace
+  else:
+    y <- z.right                                     bst.delete.successorStart    (move)
+    while y.left != NIL: y <- y.left                 bst.delete.successorLeft     (move)
+                                                     bst.delete.successorFound    (found)
+    if y.parent != z:
+      transplant(y, y.right)                         bst.delete.detachSuccessor
+      y.right <- z.right; y.right.parent <- y        bst.delete.successorTakesRight
+    transplant(z, y)                                 bst.delete.replaceWithSuccessor
+    y.left <- z.left; y.left.parent <- y             bst.delete.successorTakesLeft
+  delete z                                           bst.delete.remove
+  return                                             bst.delete.done
+
+search(value):                                       bst.search.enter
+  curr <- root
+  while curr != NIL:
+    if value = curr.value: found                     bst.search.found     (found)
+    if value < curr.value: curr <- curr.left         bst.search.goLeft    (compare)
+    else: curr <- curr.right                         bst.search.goRight   (compare)
+  not found                                          bst.search.notFound  (notFound)
+  return                                             bst.search.done
+```
+
+In frames, `pointers` use the CLRS names: `parent`/`curr` while walking down, `z` for the
+node being deleted, `y` for its successor. `clear` cuts `root` and frees the tree in
+post-order, like the binary tree.
 
 ### 2.6 AVL tree (`root`, nodes have `height`; no parent pointers)
 
@@ -1086,7 +1127,7 @@ Response:
     "algorithm": { "comparisons": 3, "nodesVisited": 2, "linksChanged": 2, "rotations": 0, "recolors": 0 },
     "trace": { "frames": 6, "snapshotNodes": 21, "truncated": false }
   },
-  "history": { "undo": 3, "redo": 0 }
+  "history": { "undo": 4, "redo": 0 }
 }
 ```
 
@@ -1099,6 +1140,9 @@ Notes:
 - In frame 3, node 4 already has its `parent` field, but 20's `right` is still `null`.
   Node 4 is owned and listed, but not yet reachable from the root.
 - `snapshotNodes` = 3 + 3 + 3 + 4 + 4 + 4 = 21.
+- `history.undo` = 4: one entry for each of the three setup inserts and one for this
+  insert. (Milestone 1 printed 3 here, which contradicted the rule in section 1; the
+  golden test caught it in milestone 3.)
 
 **Same tree, rejected:** inserting 20 instead gives frames `begin`
 (`bst.insert.enter`), `compare` (`bst.insert.goLeft`, "20 < 30, so move to the left child,

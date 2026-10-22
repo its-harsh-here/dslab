@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "dslab/BinaryTree.h"
+#include "dslab/Bst.h"
 #include "dslab/History.h"
 #include "dslab/Queue.h"
 #include "dslab/Request.h"
@@ -36,6 +37,7 @@ private:
     Outcome runQueue(const Request& request, Trace& trace);
     Outcome runList(const Request& request, Trace& trace);
     Outcome runBinaryTree(const Request& request, Trace& trace);
+    Outcome runBst(const Request& request, Trace& trace);
 
     // The shared read-only "snapshot" operation: a begin and a done frame.
     void readSnapshot(StructureKind structure, Trace& trace) const;
@@ -47,11 +49,13 @@ private:
     Queue queue_;
     SinglyLinkedList list_;
     BinaryTree binaryTree_;
+    Bst bst_;
 
     History stackHistory_;
     History queueHistory_;
     History listHistory_;
     History binaryTreeHistory_;
+    History bstHistory_;
 };
 
 }  // namespace dslab

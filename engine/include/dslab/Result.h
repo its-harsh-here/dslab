@@ -25,6 +25,8 @@ enum class ErrorCode {
     NodeNotFound,
     RootExists,
     ChildExists,
+    DuplicateValue,
+    ValueNotFound,
     // Should never happen.
     InternalError
 };

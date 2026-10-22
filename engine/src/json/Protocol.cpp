@@ -116,6 +116,16 @@ const std::vector<StructureInfo>& structureTable() {
           {"levelorder", Operation::Levelorder, kNoArgs},
           {"clear", Operation::Clear, kNoArgs},
           {"snapshot", Operation::Snapshot, kNoArgs}}},
+        {"bst", "BST", StructureKind::Bst,
+         {{"insert", Operation::Insert, kValueArg},
+          {"delete", Operation::Delete, kValueArg},
+          {"search", Operation::Search, kValueArg},
+          {"preorder", Operation::Preorder, kNoArgs},
+          {"inorder", Operation::Inorder, kNoArgs},
+          {"postorder", Operation::Postorder, kNoArgs},
+          {"levelorder", Operation::Levelorder, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs}}},
     };
     return table;
 }
@@ -193,6 +203,8 @@ const char* errorCodeName(ErrorCode code) {
         case ErrorCode::NodeNotFound: return "NODE_NOT_FOUND";
         case ErrorCode::RootExists: return "ROOT_EXISTS";
         case ErrorCode::ChildExists: return "CHILD_EXISTS";
+        case ErrorCode::DuplicateValue: return "DUPLICATE_VALUE";
+        case ErrorCode::ValueNotFound: return "VALUE_NOT_FOUND";
         case ErrorCode::InternalError: return "INTERNAL_ERROR";
     }
     return "INTERNAL_ERROR";
@@ -437,6 +449,7 @@ Json snapshotJson(const Snapshot& snapshot) {
             json["head"] = nodeOrNull(snapshot.head);
             break;
         case StructureKind::BinaryTree:
+        case StructureKind::Bst:
             json["root"] = nodeOrNull(snapshot.root);
             break;
     }

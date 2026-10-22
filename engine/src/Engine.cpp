@@ -21,6 +21,7 @@ const char* displayName(StructureKind structure) {
         case StructureKind::Queue: return "queue";
         case StructureKind::List: return "list";
         case StructureKind::BinaryTree: return "binary tree";
+        case StructureKind::Bst: return "BST";
     }
     return "structure";
 }
@@ -73,6 +74,7 @@ Response Engine::apply(const Request& request) {
             case StructureKind::Queue: outcome = runQueue(request, trace); break;
             case StructureKind::List: outcome = runList(request, trace); break;
             case StructureKind::BinaryTree: outcome = runBinaryTree(request, trace); break;
+            case StructureKind::Bst: outcome = runBst(request, trace); break;
         }
     }
 
@@ -214,12 +216,48 @@ Engine::Outcome Engine::runBinaryTree(const Request& request, Trace& trace) {
     }
 }
 
+Engine::Outcome Engine::runBst(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::Insert: {
+            const Result<NodeId> result = bst_.insert(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::Delete: {
+            const Result<NodeValue> result = bst_.remove(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<BstSearchResult> result = bst_.search(request.value, trace);
+            if (!result.data.found) {
+                return {result.status, {booleanField("found", false), nullField("nodeId")}};
+            }
+            return {result.status, {booleanField("found", true), integerField("nodeId", result.data.nodeId)}};
+        }
+        case Operation::Preorder:
+        case Operation::Inorder:
+        case Operation::Postorder:
+        case Operation::Levelorder: {
+            const Result<TraversalResult> result = bst_.traverse(orderOf(request.operation), trace);
+            return {result.status, traversalData(result.data)};
+        }
+        case Operation::Clear: {
+            const Result<int> result = bst_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
 Snapshot Engine::snapshot(StructureKind structure) const {
     switch (structure) {
         case StructureKind::Stack: return stack_.snapshot();
         case StructureKind::Queue: return queue_.snapshot();
         case StructureKind::List: return list_.snapshot();
         case StructureKind::BinaryTree: return binaryTree_.snapshot();
+        case StructureKind::Bst: return bst_.snapshot();
     }
     return Snapshot{};
 }
@@ -238,6 +276,7 @@ History& Engine::history(StructureKind structure) {
         case StructureKind::Queue: return queueHistory_;
         case StructureKind::List: return listHistory_;
         case StructureKind::BinaryTree: return binaryTreeHistory_;
+        case StructureKind::Bst: return bstHistory_;
     }
     return stackHistory_;
 }
@@ -248,6 +287,7 @@ const History& Engine::history(StructureKind structure) const {
         case StructureKind::Queue: return queueHistory_;
         case StructureKind::List: return listHistory_;
         case StructureKind::BinaryTree: return binaryTreeHistory_;
+        case StructureKind::Bst: return bstHistory_;
     }
     return stackHistory_;
 }

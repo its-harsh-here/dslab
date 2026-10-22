@@ -193,6 +193,7 @@ std::string checkLinear(const Snapshot& snapshot) {
             }
             return checkChain(snapshot, snapshot.head, "head", chain);
         case StructureKind::BinaryTree:
+        case StructureKind::Bst:
             return "not a linear structure";
         case StructureKind::Queue: {
             if (snapshot.top != kNoNode || snapshot.head != kNoNode) {
@@ -220,6 +221,7 @@ std::string wireName(StructureKind structure) {
         case StructureKind::Queue: return "queue";
         case StructureKind::List: return "list";
         case StructureKind::BinaryTree: return "binaryTree";
+        case StructureKind::Bst: return "bst";
     }
     return "unknown";
 }
@@ -232,7 +234,7 @@ std::string checkSnapshot(const Snapshot& snapshot) {
     if (isLinear(snapshot.structure)) {
         return checkLinear(snapshot);
     }
-    return checkTree(snapshot, /*bstOrder=*/false);
+    return checkTree(snapshot, /*bstOrder=*/snapshot.structure == StructureKind::Bst);
 }
 
 std::string checkFrames(const Response& response, const Snapshot& before) {

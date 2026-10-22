@@ -132,50 +132,56 @@ deferred items stay open and are carried by the milestones named.
 ## Milestone 3: queue, singly linked list, binary tree and BST
 
 Goal: the remaining non-balancing structures, with the same depth of testing as the stack.
+Each structure was committed on its own: `M3: queue`, `M3: linked list`,
+`M3: binary tree`, `M3: BST`.
 
 Engine:
-- [ ] `Queue`: `enqueue`, `dequeue`, `front`, `clear`, `restore()`.
-- [ ] `SinglyLinkedList`: `insertAt`, `deleteNode`, `search`, `reverse`, `clear`,
-      `restore()`.
-- [ ] `BinaryTree`: `addRoot`, `addChild`, `deleteSubtree`, the four traversals, `clear`,
-      `restore()`.
-- [ ] `Bst`: `insert`, `delete` (CLRS transplant, successor relinked), `search`, the four
-      traversals, `clear`, `restore()`.
-- [ ] `TreeTraversal.h` shared by the binary tree and the BST; level order uses a plain
+- [x] `Queue`: `enqueue`, `dequeue`, `front`, `clear`. (`restore()` moved to milestone 7.)
+- [x] `SinglyLinkedList`: `insertAt`, `deleteNode`, `search`, `reverse`, `clear`.
+- [x] `BinaryTree`: `addRoot`, `addChild`, `deleteSubtree`, the four traversals, `clear`.
+- [x] `Bst`: `insert`, `delete` (CLRS transplant, successor relinked), `search`, the four
+      traversals, `clear`.
+- [x] `TreeTraversal.h` shared by the binary tree and the BST; level order uses a plain
       array as its queue and fills `pending`.
-- [ ] Catalog listings for every new operation.
+- [ ] Catalog listings for every new operation (moved to milestone 6 with the catalog;
+      the listings are in operation-contract.md section 2 and in source comments).
 
 Tests:
-- [ ] Tree invariant checker (shape, single root, one parent each, parent fields, no
+- [x] Tree invariant checker (shape, single root, one parent each, parent fields, no
       cycles) and a BST-order checker, both independent of the structure classes.
-- [ ] Unit and rejection tests for every operation and error code listed in contract 2.2–2.5.
-- [ ] Oracles: stack, queue and list against `std::vector`, BST against `std::set`
-      (10,000 seeded operations each; the stack's oracle was deferred from milestone 2).
-- [ ] BST delete: leaf, one child, two children with the successor as the right child,
-      two children with a deeper successor, and deleting the root. In each case surviving
-      values keep their IDs.
-- [ ] A degenerate 200-node BST and binary tree: traversals and `deleteSubtree` under
-      ASan (recursion depth).
-- [ ] Frame-count bound ≤ 2n + 16 checked at n = 200 for every operation.
-- [ ] Golden files: contract 7.2 (BST insert 25), 5.2 (BST snapshot) and the rejected
-      duplicate described after 7.2.
+- [x] Unit and rejection tests for every operation and error code listed in contract 2.2–2.5.
+- [x] Oracles: stack, queue and list against `std::vector`, BST against `std::set`
+      (10,000 seeded operations each).
+- [x] BST delete: leaf, one child (each side), two children with the successor as the
+      right child, two children with a deeper successor (with and without a right child),
+      and deleting the root in each case. Surviving values keep their IDs.
+- [x] A degenerate 200-node BST and binary tree: traversals, `deleteSubtree`/`clear`
+      natively. [ ] The same under ASan was not run in this milestone (the ASan suite is slow
+      on this machine; see the note in architecture.md section 10).
+- [x] Frame-count bound ≤ 2n + 16 checked after every operation in every test, including
+      200-node cases for inserts, traversals, clears and a degenerate BST delete.
+- [x] Golden files: contract 7.2 (BST insert 25) and 5.2 (BST snapshot); the rejected
+      duplicate described after 7.2 is a unit test. (7.2 printed `"undo": 3`; the rule in
+      contract section 1 gives 4, and the example was corrected.)
 
 Web:
-- [ ] Queue and list tabs (horizontal), binary-tree and BST tabs.
-- [ ] Clicking a node selects it by ID (list `deleteNode`; binary-tree `addChild` and
-      `deleteSubtree`). In BST tabs a click fills the value box.
-- [ ] Basic layout: linear index and tree in-order/depth for reachable nodes;
-      unreachable nodes in a staging row (the full rule arrives in milestone 6).
-- [ ] Traversal output strip (`output`) and level-order queue (`pending`).
+- [x] Queue and list tabs (horizontal), binary-tree and BST tabs.
+- [x] Clicking a node selects it by ID (list `deleteNode`; binary-tree `addChild` and
+      `deleteSubtree`). In the BST tab a click fills the value box.
+- [x] Layout: one rule for every structure (architecture.md 3.2): re-pack when every node
+      is reachable, otherwise freeze positions; new nodes wait in a staging spot.
+- [x] Traversal output strip (`output`) and level-order queue (`pending`).
 
-End-to-end:
-- [ ] One smoke test per tab: each operation, plus one error each.
-- [ ] Insert 200 increasing values into the BST, then `inorder`: it completes in the
-      browser (Wasm stack depth) and lists all 200 values.
+End-to-end (by hand with the Playwright MCP browser; the scripted suite is milestone 6):
+- [x] Each tab: its main operations plus at least one typed error, with a screenshot in
+      `docs/screenshots/m3-*.png` and no console errors.
+- [x] 200 increasing values inserted into the BST, then all four traversals: they complete
+      in the browser (Wasm stack depth) with 200 values each and 402 frames for the
+      depth-first orders.
 
-**Definition of done:** every structure in this milestone passes its tests, the three
-golden files match, and the demo works: build the BST 30, 20, 40, insert 25 and step
-through the six frames of contract 7.2.
+**Definition of done:** every structure in this milestone passes its tests, the golden
+files match, and the demo works: build the BST 30, 20, 40, insert 25 and step through the
+six frames of contract 7.2.
 
 ---
 

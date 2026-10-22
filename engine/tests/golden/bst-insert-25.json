@@ -1,0 +1,402 @@
+{
+  "source": "docs/operation-contract.md, section 7.2",
+  "setup": [
+    {
+      "schemaVersion": 1,
+      "requestId": 1,
+      "structure": "bst",
+      "operation": "insert",
+      "args": {
+        "value": 30
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "requestId": 2,
+      "structure": "bst",
+      "operation": "insert",
+      "args": {
+        "value": 20
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "requestId": 3,
+      "structure": "bst",
+      "operation": "insert",
+      "args": {
+        "value": 40
+      }
+    }
+  ],
+  "request": {
+    "schemaVersion": 1,
+    "requestId": 4,
+    "structure": "bst",
+    "operation": "insert",
+    "args": {
+      "value": 25
+    }
+  },
+  "response": {
+    "schemaVersion": 1,
+    "requestId": 4,
+    "structure": "bst",
+    "operation": "insert",
+    "result": {
+      "status": "ok",
+      "data": {
+        "nodeId": 4
+      }
+    },
+    "snapshot": {
+      "structure": "bst",
+      "size": 4,
+      "root": 1,
+      "nodes": [
+        {
+          "id": 1,
+          "value": 30,
+          "left": 2,
+          "right": 3,
+          "parent": null
+        },
+        {
+          "id": 2,
+          "value": 20,
+          "left": null,
+          "right": 4,
+          "parent": 1
+        },
+        {
+          "id": 3,
+          "value": 40,
+          "left": null,
+          "right": null,
+          "parent": 1
+        },
+        {
+          "id": 4,
+          "value": 25,
+          "left": null,
+          "right": null,
+          "parent": 2
+        }
+      ]
+    },
+    "frames": [
+      {
+        "index": 0,
+        "event": "begin",
+        "stepId": "bst.insert.enter",
+        "explanation": "Insert 25 into a BST that holds 3 nodes.",
+        "highlight": {
+          "nodes": [],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 3,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            }
+          ]
+        }
+      },
+      {
+        "index": 1,
+        "event": "compare",
+        "stepId": "bst.insert.goLeft",
+        "explanation": "25 < 30, so move to the left child, 20.",
+        "highlight": {
+          "nodes": [
+            1
+          ],
+          "edges": [
+            "1->2"
+          ]
+        },
+        "pointers": {
+          "parent": 1,
+          "curr": 2
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 3,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            }
+          ]
+        }
+      },
+      {
+        "index": 2,
+        "event": "compare",
+        "stepId": "bst.insert.goRight",
+        "explanation": "25 > 20, so move to the right child, which is empty.",
+        "highlight": {
+          "nodes": [
+            2
+          ],
+          "edges": []
+        },
+        "pointers": {
+          "parent": 2,
+          "curr": null
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 3,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            }
+          ]
+        }
+      },
+      {
+        "index": 3,
+        "event": "create",
+        "stepId": "bst.insert.create",
+        "explanation": "Create a new node holding 25 whose parent is 20.",
+        "highlight": {
+          "nodes": [
+            4
+          ],
+          "edges": []
+        },
+        "pointers": {
+          "parent": 2,
+          "node": 4
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 4,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 4,
+              "value": 25,
+              "left": null,
+              "right": null,
+              "parent": 2
+            }
+          ]
+        }
+      },
+      {
+        "index": 4,
+        "event": "link",
+        "stepId": "bst.insert.linkRight",
+        "explanation": "25 > 20, so attach the new node as the right child of 20.",
+        "highlight": {
+          "nodes": [
+            2,
+            4
+          ],
+          "edges": [
+            "2->4"
+          ]
+        },
+        "pointers": {
+          "parent": 2,
+          "node": 4
+        },
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 4,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": 4,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 4,
+              "value": 25,
+              "left": null,
+              "right": null,
+              "parent": 2
+            }
+          ]
+        }
+      },
+      {
+        "index": 5,
+        "event": "done",
+        "stepId": "bst.insert.done",
+        "explanation": "Inserted 25; the BST now holds 4 nodes.",
+        "highlight": {
+          "nodes": [
+            4
+          ],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 4,
+          "root": 1,
+          "nodes": [
+            {
+              "id": 1,
+              "value": 30,
+              "left": 2,
+              "right": 3,
+              "parent": null
+            },
+            {
+              "id": 2,
+              "value": 20,
+              "left": null,
+              "right": 4,
+              "parent": 1
+            },
+            {
+              "id": 3,
+              "value": 40,
+              "left": null,
+              "right": null,
+              "parent": 1
+            },
+            {
+              "id": 4,
+              "value": 25,
+              "left": null,
+              "right": null,
+              "parent": 2
+            }
+          ]
+        }
+      }
+    ],
+    "metrics": {
+      "algorithm": {
+        "comparisons": 3,
+        "nodesVisited": 2,
+        "linksChanged": 2,
+        "rotations": 0,
+        "recolors": 0
+      },
+      "trace": {
+        "frames": 6,
+        "snapshotNodes": 21,
+        "truncated": false
+      }
+    },
+    "history": {
+      "undo": 4,
+      "redo": 0
+    }
+  }
+}

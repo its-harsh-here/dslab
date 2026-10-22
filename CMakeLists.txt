@@ -21,6 +21,7 @@ endif()
 # The engine: plain C++17 that compiles natively and to WebAssembly.
 add_library(dslab_engine STATIC
   engine/src/BinaryTree.cpp
+  engine/src/Bst.cpp
   engine/src/Engine.cpp
   engine/src/History.cpp
   engine/src/Queue.cpp
@@ -54,6 +55,7 @@ else()
   add_executable(dslab_tests
     engine/tests/test_main.cpp
     engine/tests/test_binary_tree.cpp
+    engine/tests/test_bst.cpp
     engine/tests/test_list.cpp
     engine/tests/test_protocol.cpp
     engine/tests/test_queue.cpp

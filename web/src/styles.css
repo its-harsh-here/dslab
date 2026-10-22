@@ -187,6 +187,11 @@ h2 {
   cursor: pointer;
 }
 
+.node[role='button']:focus {
+  outline: none;
+}
+
+/* Keyboard users still see where focus is. */
 .node[role='button']:focus-visible {
   outline: 2px solid var(--select);
   outline-offset: 4px;

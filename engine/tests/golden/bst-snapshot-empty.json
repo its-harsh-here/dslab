@@ -1,0 +1,85 @@
+{
+  "source": "docs/operation-contract.md, section 5.2",
+  "setup": [],
+  "request": {
+    "schemaVersion": 1,
+    "requestId": 1,
+    "structure": "bst",
+    "operation": "snapshot",
+    "args": {}
+  },
+  "response": {
+    "schemaVersion": 1,
+    "requestId": 1,
+    "structure": "bst",
+    "operation": "snapshot",
+    "result": {
+      "status": "ok",
+      "data": {}
+    },
+    "snapshot": {
+      "structure": "bst",
+      "size": 0,
+      "root": null,
+      "nodes": []
+    },
+    "frames": [
+      {
+        "index": 0,
+        "event": "begin",
+        "stepId": "common.snapshot.enter",
+        "explanation": "Read the current state of the BST.",
+        "highlight": {
+          "nodes": [],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 0,
+          "root": null,
+          "nodes": []
+        }
+      },
+      {
+        "index": 1,
+        "event": "done",
+        "stepId": "common.snapshot.done",
+        "explanation": "The BST is empty.",
+        "highlight": {
+          "nodes": [],
+          "edges": []
+        },
+        "pointers": {},
+        "output": [],
+        "pending": [],
+        "snapshot": {
+          "structure": "bst",
+          "size": 0,
+          "root": null,
+          "nodes": []
+        }
+      }
+    ],
+    "metrics": {
+      "algorithm": {
+        "comparisons": 0,
+        "nodesVisited": 0,
+        "linksChanged": 0,
+        "rotations": 0,
+        "recolors": 0
+      },
+      "trace": {
+        "frames": 2,
+        "snapshotNodes": 0,
+        "truncated": false
+      }
+    },
+    "history": {
+      "undo": 0,
+      "redo": 0
+    }
+  }
+}

@@ -5,8 +5,9 @@ algorithm; it is compiled to WebAssembly and drawn in the browser with React and
 Every step you see is a frame recorded by the C++ code while it runs. There is no
 JavaScript copy of any algorithm and no backend.
 
-**Status:** milestone 2, the stack slice. Push, pop, peek and clear run in C++ and
-animate in the page. The other structures follow (see [docs/plan.md](docs/plan.md)).
+**Status:** milestone 3. Stack, queue, singly linked list, ordinary binary tree and
+binary search tree run in C++ and animate in the page, one tab each. AVL and red-black
+trees follow (see [docs/plan.md](docs/plan.md)).
 
 ![The stack after push 10, push 20, pop](docs/screenshots/stack-after-push10-push20-pop.png)
 

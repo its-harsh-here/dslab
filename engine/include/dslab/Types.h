@@ -14,7 +14,7 @@ using NodeId = std::int32_t;
 constexpr NodeId kNoNode = 0;
 
 // The structures this engine implements. AVL and red-black trees come later.
-enum class StructureKind { Stack, Queue, List, BinaryTree };
+enum class StructureKind { Stack, Queue, List, BinaryTree, Bst };
 
 // Stack, queue and list nodes link with "next"; tree nodes with left/right/parent.
 inline bool isLinear(StructureKind structure) {
