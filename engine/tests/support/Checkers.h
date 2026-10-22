@@ -15,10 +15,12 @@ namespace dslab::test {
 // The structure's wire name, e.g. "queue" (step IDs start with it).
 std::string wireName(StructureKind structure);
 
-// Invariants of a finished operation's snapshot, chosen by its structure:
-// sizes agree, IDs ascend, links point at listed nodes, and the chain from the
-// entry pointer reaches every node exactly once and ends at NIL. A queue's
-// rear is the last node of that chain. Unused entry pointers are NIL.
+// Invariants of a finished operation's snapshot, chosen by its structure.
+// Always: sizes agree, IDs ascend, links point at listed nodes, unused entry
+// pointers are NIL. Linear: the chain from the entry pointer reaches every
+// node exactly once and ends at NIL; a queue's rear is its last node. Trees:
+// one root, one parent link per other node, parent fields correct, every node
+// reachable; a BST's in-order values strictly increase.
 std::string checkSnapshot(const Snapshot& snapshot);
 
 // Frame-list invariants of docs/operation-contract.md 6.6 for one response

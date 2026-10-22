@@ -229,6 +229,57 @@ unlinks the selected node from its parent (or sets `root` to null), then frees t
 subtree in post-order. Deleting the root empties the tree. Traversing an empty tree
 succeeds with empty lists.
 
+Step IDs (the same listings are comments in `engine/src/BinaryTree.cpp`):
+
+```
+addRoot(value):                                   binaryTree.addRoot.enter
+  if size = 200: reject CAPACITY_EXCEEDED         binaryTree.addRoot.full
+  if root != NIL: reject ROOT_EXISTS              binaryTree.addRoot.rootExists
+  node <- new Node(value)                         binaryTree.addRoot.create
+  root <- node                                    binaryTree.addRoot.linkRoot
+  return node                                     binaryTree.addRoot.done
+
+addChild(parentId, side, value):                  binaryTree.addChild.enter
+  if size = 200: reject CAPACITY_EXCEEDED         binaryTree.addChild.full
+  parent <- the node with parentId
+  if there is none: reject NODE_NOT_FOUND         binaryTree.addChild.missing
+  if parent.side != NIL: reject CHILD_EXISTS      binaryTree.addChild.occupied
+  node <- new Node(value); node.parent <- parent  binaryTree.addChild.create
+  parent.side <- node                             binaryTree.addChild.link
+  return node                                     binaryTree.addChild.done
+
+deleteSubtree(id):                                binaryTree.deleteSubtree.enter
+  node <- the node with id
+  if there is none: reject NODE_NOT_FOUND         binaryTree.deleteSubtree.missing
+  root <- NIL, or node.parent.side <- NIL         binaryTree.deleteSubtree.cut     (unlink)
+  freeSubtree(node)                               binaryTree.deleteSubtree.remove  (one frame per node)
+  return the freed IDs (post-order)               binaryTree.deleteSubtree.done
+
+freeSubtree(n):   (post-order: children before their parent)
+  if n.left != NIL:  child <- n.left;  n.left <- NIL;  freeSubtree(child)
+  if n.right != NIL: child <- n.right; n.right <- NIL; freeSubtree(child)
+  delete n
+```
+
+`clear` cuts `root` (`binaryTree.clear.cut`) and frees the old tree the same way
+(`binaryTree.clear.remove`). Cutting each link before its child is freed means no
+remaining node ever points at freed memory, which matters because every frame copies the
+whole structure.
+
+**Traversals** (shared by the binary tree and the BST; `engine/include/dslab/TreeTraversal.h`).
+Step IDs are `<structure>.<order>.<step>`:
+
+| Step | Event | Meaning |
+| --- | --- | --- |
+| `enter` | begin | — |
+| `start` | move | arrive at the root (pre-, in- and post-order) |
+| `goLeft` / `goRight` | move | arrive at a child; the parent→child edge is highlighted |
+| `visit` | visit | output the node's value (`output` grows). In level order: take the node from the front of the queue, visit it, add its children to the back (`pending` = the queue afterwards) |
+| `done` | done | — |
+
+Depth-first traversals record 2n + 2 frames (one arrival and one visit per node); level
+order records n + 2. Level order uses a plain array as its queue, never `std::queue`.
+
 ### 2.5 Binary search tree (`root`, nodes have `parent`; CLRS style)
 
 | Operation | Args | Mutates | Errors | Success `data` | Algorithm |

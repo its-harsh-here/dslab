@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { loadEngine, type LoadedEngine } from './engine/loadEngine';
 import { STRUCTURES, type StructureName } from './engine/protocol';
+import { BinaryTreePanel } from './panels/BinaryTreePanel';
 import { EngineLoadErrorView } from './panels/EngineLoadErrorView';
 import { ListPanel } from './panels/ListPanel';
 import { QueuePanel } from './panels/QueuePanel';
@@ -16,6 +17,7 @@ const TAB_LABELS: Record<StructureName, string> = {
   stack: 'Stack',
   queue: 'Queue',
   list: 'Linked list',
+  binaryTree: 'Binary tree',
 };
 
 function panelFor(structure: StructureName, engine: LoadedEngine): ReactNode {
@@ -26,6 +28,8 @@ function panelFor(structure: StructureName, engine: LoadedEngine): ReactNode {
       return <QueuePanel engine={engine} />;
     case 'list':
       return <ListPanel engine={engine} />;
+    case 'binaryTree':
+      return <BinaryTreePanel engine={engine} />;
   }
 }
 

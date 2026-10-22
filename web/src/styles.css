@@ -115,6 +115,10 @@ h2 {
   cursor: not-allowed;
 }
 
+.traversals {
+  margin-top: 8px;
+}
+
 .controls .group-label {
   color: var(--muted);
   margin-left: 8px;

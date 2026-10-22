@@ -111,6 +111,15 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         {"list delete with a value instead of a node ID",
          R"({"schemaVersion":1,"requestId":1,"structure":"list","operation":"deleteNode","args":{"value":1}})",
          "BAD_REQUEST", true},
+        {"binary tree side that is neither left nor right",
+         R"({"schemaVersion":1,"requestId":1,"structure":"binaryTree","operation":"addChild","args":{"parentId":1,"side":"up","value":1}})",
+         "BAD_REQUEST", true},
+        {"binary tree child without a side",
+         R"({"schemaVersion":1,"requestId":1,"structure":"binaryTree","operation":"addChild","args":{"parentId":1,"value":1}})",
+         "BAD_REQUEST", true},
+        {"binary tree parent ID out of the 32-bit range",
+         R"({"schemaVersion":1,"requestId":1,"structure":"binaryTree","operation":"addChild","args":{"parentId":-2147483649,"side":"left","value":1}})",
+         "VALUE_OUT_OF_RANGE", true},
     };
 
     for (const Case& c : cases) {
@@ -119,8 +128,16 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         // Some state that must survive the error, in each structure the cases use.
         send(engine, pushRequest("10"));
         send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"list","operation":"insertAt","args":{"index":0,"value":10}})");
-        const Json stackBefore = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"stack","operation":"snapshot","args":{}})");
-        const Json listBefore = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"list","operation":"snapshot","args":{}})");
+        send(engine, R"({"schemaVersion":1,"requestId":2,"structure":"binaryTree","operation":"addRoot","args":{"value":10}})");
+
+        // The state of the structure the request names, taken just before it.
+        std::string structure;
+        Json before;
+        if (c.structureKnown) {
+            structure = Json::parse(c.request)["structure"];
+            before = send(engine, R"({"schemaVersion":1,"requestId":2,"structure":")" + structure +
+                                      R"(","operation":"snapshot","args":{}})");
+        }
 
         const Json response = send(engine, c.request);
         CHECK(response["schemaVersion"] == 1);
@@ -128,8 +145,6 @@ TEST_CASE("protocol errors return a typed code, no frames and no change") {
         CHECK(response["result"]["code"] == c.code);
         CHECK(response["frames"] == Json::array());
         if (c.structureKnown) {
-            const std::string structure = Json::parse(c.request)["structure"];
-            const Json& before = (structure == "list") ? listBefore : stackBefore;
             CHECK(response["structure"] == structure);
             CHECK(response["snapshot"] == before["snapshot"]);
             CHECK(response["history"] == before["history"]);

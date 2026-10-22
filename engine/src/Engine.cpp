@@ -1,7 +1,9 @@
 #include "dslab/Engine.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace dslab {
 
@@ -18,8 +20,30 @@ const char* displayName(StructureKind structure) {
         case StructureKind::Stack: return "stack";
         case StructureKind::Queue: return "queue";
         case StructureKind::List: return "list";
+        case StructureKind::BinaryTree: return "binary tree";
     }
     return "structure";
+}
+
+// Turns a list of IDs or values into the 64-bit list the response holds.
+template <typename T>
+std::vector<std::int64_t> widen(const std::vector<T>& items) {
+    return std::vector<std::int64_t>(items.begin(), items.end());
+}
+
+// The data of a traversal: values and node IDs in visit order.
+std::vector<DataField> traversalData(const TraversalResult& result) {
+    return {listField("values", widen(result.values)), listField("nodeIds", widen(result.nodeIds))};
+}
+
+// Which traversal a traversal operation asks for.
+TraversalOrder orderOf(Operation operation) {
+    switch (operation) {
+        case Operation::Inorder: return TraversalOrder::In;
+        case Operation::Postorder: return TraversalOrder::Post;
+        case Operation::Levelorder: return TraversalOrder::Level;
+        default: return TraversalOrder::Pre;
+    }
 }
 
 // The JSON layer only builds valid structure/operation pairs, so this is never returned.
@@ -48,6 +72,7 @@ Response Engine::apply(const Request& request) {
             case StructureKind::Stack: outcome = runStack(request, trace); break;
             case StructureKind::Queue: outcome = runQueue(request, trace); break;
             case StructureKind::List: outcome = runList(request, trace); break;
+            case StructureKind::BinaryTree: outcome = runBinaryTree(request, trace); break;
         }
     }
 
@@ -153,11 +178,48 @@ Engine::Outcome Engine::runList(const Request& request, Trace& trace) {
     }
 }
 
+Engine::Outcome Engine::runBinaryTree(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::AddRoot: {
+            const Result<NodeId> result = binaryTree_.addRoot(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::AddChild: {
+            const Result<NodeId> result =
+                binaryTree_.addChild(request.parentId, request.side, request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::DeleteSubtree: {
+            const Result<std::vector<NodeId>> result = binaryTree_.deleteSubtree(request.nodeId, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status,
+                    {listField("removedIds", widen(result.data)),
+                     integerField("removedCount", static_cast<std::int64_t>(result.data.size()))}};
+        }
+        case Operation::Preorder:
+        case Operation::Inorder:
+        case Operation::Postorder:
+        case Operation::Levelorder: {
+            const Result<TraversalResult> result = binaryTree_.traverse(orderOf(request.operation), trace);
+            return {result.status, traversalData(result.data)};
+        }
+        case Operation::Clear: {
+            const Result<int> result = binaryTree_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
 Snapshot Engine::snapshot(StructureKind structure) const {
     switch (structure) {
         case StructureKind::Stack: return stack_.snapshot();
         case StructureKind::Queue: return queue_.snapshot();
         case StructureKind::List: return list_.snapshot();
+        case StructureKind::BinaryTree: return binaryTree_.snapshot();
     }
     return Snapshot{};
 }
@@ -175,6 +237,7 @@ History& Engine::history(StructureKind structure) {
         case StructureKind::Stack: return stackHistory_;
         case StructureKind::Queue: return queueHistory_;
         case StructureKind::List: return listHistory_;
+        case StructureKind::BinaryTree: return binaryTreeHistory_;
     }
     return stackHistory_;
 }
@@ -184,6 +247,7 @@ const History& Engine::history(StructureKind structure) const {
         case StructureKind::Stack: return stackHistory_;
         case StructureKind::Queue: return queueHistory_;
         case StructureKind::List: return listHistory_;
+        case StructureKind::BinaryTree: return binaryTreeHistory_;
     }
     return stackHistory_;
 }

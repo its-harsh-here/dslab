@@ -5,7 +5,7 @@
 export const SCHEMA_VERSION = 1;
 
 /** The structures this build of the engine implements, in tab order. */
-export const STRUCTURES = ['stack', 'queue', 'list'] as const;
+export const STRUCTURES = ['stack', 'queue', 'list', 'binaryTree'] as const;
 export type StructureName = (typeof STRUCTURES)[number];
 
 export type NodeId = number;
@@ -39,7 +39,23 @@ export interface ListSnapshot {
   readonly nodes: readonly LinearNode[];
 }
 
-export type Snapshot = StackSnapshot | QueueSnapshot | ListSnapshot;
+/** Binary tree and BST nodes. */
+export interface TreeNode {
+  readonly id: NodeId;
+  readonly value: number;
+  readonly left: NodeId | null;
+  readonly right: NodeId | null;
+  readonly parent: NodeId | null;
+}
+
+export interface TreeSnapshot {
+  readonly structure: 'binaryTree' | 'bst';
+  readonly size: number;
+  readonly root: NodeId | null;
+  readonly nodes: readonly TreeNode[];
+}
+
+export type Snapshot = StackSnapshot | QueueSnapshot | ListSnapshot | TreeSnapshot;
 
 export type EventName =
   | 'begin' | 'compare' | 'move' | 'visit' | 'read' | 'found' | 'notFound'

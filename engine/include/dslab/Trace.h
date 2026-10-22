@@ -23,10 +23,13 @@ struct Counters {
 class Trace {
 public:
     // Records one frame showing 'snapshot', the state right after the step.
-    // Done and Reject frames are always kept; other frames stop being kept
-    // once only one place is left under kMaxFramesPerOperation.
+    // 'output' and 'pending' are used by traversals only (values visited so
+    // far; the level-order queue). Done and Reject frames are always kept;
+    // other frames stop being kept once only one place is left under
+    // kMaxFramesPerOperation.
     void frame(Snapshot snapshot, Event event, std::string stepId, std::string explanation,
-               Highlight highlight = {}, std::vector<NamedPointer> pointers = {});
+               Highlight highlight = {}, std::vector<NamedPointer> pointers = {},
+               std::vector<Value> output = {}, std::vector<NodeId> pending = {});
 
     const std::vector<Frame>& frames() const { return frames_; }
 

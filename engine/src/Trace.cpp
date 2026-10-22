@@ -7,7 +7,8 @@
 namespace dslab {
 
 void Trace::frame(Snapshot snapshot, Event event, std::string stepId, std::string explanation,
-                  Highlight highlight, std::vector<NamedPointer> pointers) {
+                  Highlight highlight, std::vector<NamedPointer> pointers,
+                  std::vector<Value> output, std::vector<NodeId> pending) {
     const bool isLast = (event == Event::Done || event == Event::Reject);
 
     // Keep one place free for the final frame, which is always kept.
@@ -23,6 +24,8 @@ void Trace::frame(Snapshot snapshot, Event event, std::string stepId, std::strin
     next.explanation = std::move(explanation);
     next.highlight = std::move(highlight);
     next.pointers = std::move(pointers);
+    next.output = std::move(output);
+    next.pending = std::move(pending);
     next.snapshot = std::move(snapshot);
     frames_.push_back(std::move(next));
 }

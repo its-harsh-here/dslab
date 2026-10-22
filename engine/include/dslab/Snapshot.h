@@ -14,7 +14,10 @@ namespace dslab {
 struct NodeView {
     NodeId id = kNoNode;
     Value value = 0;
-    NodeId next = kNoNode;  // stack, queue, list
+    NodeId next = kNoNode;    // stack, queue, list
+    NodeId left = kNoNode;    // trees
+    NodeId right = kNoNode;   // trees
+    NodeId parent = kNoNode;  // trees that store a parent pointer
 };
 
 struct Snapshot {
@@ -26,12 +29,14 @@ struct Snapshot {
     NodeId front = kNoNode;  // queue
     NodeId rear = kNoNode;   // queue
     NodeId head = kNoNode;   // list
+    NodeId root = kNoNode;   // trees
 
     std::vector<NodeView> nodes;  // every owned node, in ascending ID order
 };
 
 inline bool operator==(const NodeView& a, const NodeView& b) {
-    return a.id == b.id && a.value == b.value && a.next == b.next;
+    return a.id == b.id && a.value == b.value && a.next == b.next && a.left == b.left &&
+           a.right == b.right && a.parent == b.parent;
 }
 
 inline bool operator!=(const NodeView& a, const NodeView& b) {
@@ -40,7 +45,8 @@ inline bool operator!=(const NodeView& a, const NodeView& b) {
 
 inline bool operator==(const Snapshot& a, const Snapshot& b) {
     return a.structure == b.structure && a.size == b.size && a.top == b.top &&
-           a.front == b.front && a.rear == b.rear && a.head == b.head && a.nodes == b.nodes;
+           a.front == b.front && a.rear == b.rear && a.head == b.head && a.root == b.root &&
+           a.nodes == b.nodes;
 }
 
 inline bool operator!=(const Snapshot& a, const Snapshot& b) {

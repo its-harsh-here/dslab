@@ -25,7 +25,7 @@ bool contains(const Snapshot& snapshot, NodeId node) {
 // True when 'from' is listed and one of its links points at 'to'.
 bool hasLink(const Snapshot& snapshot, NodeId from, NodeId to) {
     return std::any_of(snapshot.nodes.begin(), snapshot.nodes.end(), [from, to](const NodeView& view) {
-        return view.id == from && view.next == to;
+        return view.id == from && (view.next == to || view.left == to || view.right == to);
     });
 }
 
@@ -81,7 +81,105 @@ std::string checkChain(const Snapshot& snapshot, NodeId entry, const char* entry
     return "";
 }
 
+// Tree invariants: one root (NIL exactly when empty), every other node has
+// exactly one parent link pointing at it, every node is reachable from the root
+// (so there are no cycles), and each stored parent field names the real parent.
+// With 'bstOrder', the in-order values must also strictly increase.
+std::string checkTree(const Snapshot& snapshot, bool bstOrder) {
+    if (snapshot.top != kNoNode || snapshot.front != kNoNode || snapshot.rear != kNoNode ||
+        snapshot.head != kNoNode) {
+        return "a tree must not use top, front, rear or head";
+    }
+    std::map<NodeId, NodeView> byId;
+    for (const NodeView& node : snapshot.nodes) {
+        if (node.next != kNoNode) {
+            return "tree node " + id(node.id) + " uses next";
+        }
+        byId[node.id] = node;
+    }
+
+    std::map<NodeId, NodeId> parentOf;  // child -> the node whose link points at it
+    for (const NodeView& node : snapshot.nodes) {
+        for (const NodeId child : {node.left, node.right}) {
+            if (child == kNoNode) {
+                continue;
+            }
+            if (byId.count(child) == 0) {
+                return "node " + id(node.id) + " links to missing node " + id(child);
+            }
+            if (parentOf.count(child) != 0) {
+                return "node " + id(child) + " has two parents";
+            }
+            parentOf[child] = node.id;
+        }
+        if (node.left != kNoNode && node.left == node.right) {
+            return "node " + id(node.id) + " has the same left and right child";
+        }
+    }
+
+    if ((snapshot.root == kNoNode) != snapshot.nodes.empty()) {
+        return "root must be NIL exactly when the tree is empty";
+    }
+    if (snapshot.root == kNoNode) {
+        return "";
+    }
+    if (byId.count(snapshot.root) == 0) {
+        return "root points to missing node " + id(snapshot.root);
+    }
+    if (parentOf.count(snapshot.root) != 0) {
+        return "the root is somebody's child";
+    }
+    for (const NodeView& node : snapshot.nodes) {
+        const NodeId expected = (node.id == snapshot.root) ? kNoNode : parentOf[node.id];
+        if (node.id != snapshot.root && parentOf.count(node.id) == 0) {
+            return "node " + id(node.id) + " is not linked into the tree";
+        }
+        if (node.parent != expected) {
+            return "node " + id(node.id) + " says its parent is " + id(node.parent) + " but it is " +
+                   id(expected);
+        }
+    }
+
+    // Walk from the root (iteratively, in-order) to check reachability and order.
+    std::vector<NodeId> stack;
+    std::vector<Value> inorder;
+    std::set<NodeId> seen;
+    NodeId current = snapshot.root;
+    while (current != kNoNode || !stack.empty()) {
+        while (current != kNoNode) {
+            if (!seen.insert(current).second) {
+                return "a cycle passes through node " + id(current);
+            }
+            stack.push_back(current);
+            current = byId[current].left;
+        }
+        current = stack.back();
+        stack.pop_back();
+        inorder.push_back(byId[current].value);
+        current = byId[current].right;
+    }
+    if (seen.size() != snapshot.nodes.size()) {
+        return "some nodes cannot be reached from the root";
+    }
+    if (bstOrder) {
+        for (std::size_t i = 1; i < inorder.size(); ++i) {
+            if (inorder[i - 1] >= inorder[i]) {
+                return "in-order values do not strictly increase at " + std::to_string(inorder[i]);
+            }
+        }
+    }
+    return "";
+}
+
 std::string checkLinear(const Snapshot& snapshot) {
+    if (snapshot.root != kNoNode) {
+        return "a linear structure must not use root";
+    }
+    for (const NodeView& node : snapshot.nodes) {
+        if (node.left != kNoNode || node.right != kNoNode || node.parent != kNoNode) {
+            return "linear node " + id(node.id) + " uses tree links";
+        }
+    }
     std::vector<NodeId> chain;
     switch (snapshot.structure) {
         case StructureKind::Stack:
@@ -94,6 +192,8 @@ std::string checkLinear(const Snapshot& snapshot) {
                 return "a list must not use top, front or rear";
             }
             return checkChain(snapshot, snapshot.head, "head", chain);
+        case StructureKind::BinaryTree:
+            return "not a linear structure";
         case StructureKind::Queue: {
             if (snapshot.top != kNoNode || snapshot.head != kNoNode) {
                 return "a queue must not use top or head";
@@ -119,6 +219,7 @@ std::string wireName(StructureKind structure) {
         case StructureKind::Stack: return "stack";
         case StructureKind::Queue: return "queue";
         case StructureKind::List: return "list";
+        case StructureKind::BinaryTree: return "binaryTree";
     }
     return "unknown";
 }
@@ -128,7 +229,10 @@ std::string checkSnapshot(const Snapshot& snapshot) {
     if (!common.empty()) {
         return common;
     }
-    return checkLinear(snapshot);
+    if (isLinear(snapshot.structure)) {
+        return checkLinear(snapshot);
+    }
+    return checkTree(snapshot, /*bstOrder=*/false);
 }
 
 std::string checkFrames(const Response& response, const Snapshot& before) {

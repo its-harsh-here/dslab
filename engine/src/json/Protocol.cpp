@@ -30,6 +30,8 @@ enum ArgFlag : unsigned {
     kValueArg = 1,
     kIndexArg = 2,
     kNodeIdArg = 4,
+    kParentIdArg = 8,
+    kSideArg = 16,
 };
 
 // The integer arguments, in the order they are checked.
@@ -39,6 +41,7 @@ struct IntegerArg {
 };
 
 const IntegerArg kIntegerArgs[] = {
+    {kParentIdArg, "parentId"},
     {kIndexArg, "index"},
     {kValueArg, "value"},
     {kNodeIdArg, "nodeId"},
@@ -46,6 +49,9 @@ const IntegerArg kIntegerArgs[] = {
 
 // The flag of the argument called 'name', or kNoArgs when there is none.
 unsigned argFlag(const std::string& name) {
+    if (name == "side") {
+        return kSideArg;
+    }
     for (const IntegerArg& arg : kIntegerArgs) {
         if (name == arg.name) {
             return arg.flag;
@@ -60,6 +66,8 @@ void storeInteger(Request& request, ArgFlag flag, std::int32_t number) {
         case kValueArg: request.value = number; break;
         case kIndexArg: request.index = number; break;
         case kNodeIdArg: request.nodeId = number; break;
+        case kParentIdArg: request.parentId = number; break;
+        case kSideArg:
         case kNoArgs: break;
     }
 }
@@ -96,6 +104,16 @@ const std::vector<StructureInfo>& structureTable() {
           {"deleteNode", Operation::DeleteNode, kNodeIdArg},
           {"search", Operation::Search, kValueArg},
           {"reverse", Operation::Reverse, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs}}},
+        {"binaryTree", "binary tree", StructureKind::BinaryTree,
+         {{"addRoot", Operation::AddRoot, kValueArg},
+          {"addChild", Operation::AddChild, kParentIdArg | kSideArg | kValueArg},
+          {"deleteSubtree", Operation::DeleteSubtree, kNodeIdArg},
+          {"preorder", Operation::Preorder, kNoArgs},
+          {"inorder", Operation::Inorder, kNoArgs},
+          {"postorder", Operation::Postorder, kNoArgs},
+          {"levelorder", Operation::Levelorder, kNoArgs},
           {"clear", Operation::Clear, kNoArgs},
           {"snapshot", Operation::Snapshot, kNoArgs}}},
     };
@@ -147,6 +165,7 @@ const char* eventName(Event event) {
         case Event::Compare: return "compare";
         case Event::Move: return "move";
         case Event::Read: return "read";
+        case Event::Visit: return "visit";
         case Event::Found: return "found";
         case Event::NotFound: return "notFound";
         case Event::Create: return "create";
@@ -172,6 +191,8 @@ const char* errorCodeName(ErrorCode code) {
         case ErrorCode::EmptyStructure: return "EMPTY_STRUCTURE";
         case ErrorCode::IndexOutOfRange: return "INDEX_OUT_OF_RANGE";
         case ErrorCode::NodeNotFound: return "NODE_NOT_FOUND";
+        case ErrorCode::RootExists: return "ROOT_EXISTS";
+        case ErrorCode::ChildExists: return "CHILD_EXISTS";
         case ErrorCode::InternalError: return "INTERNAL_ERROR";
     }
     return "INTERNAL_ERROR";
@@ -360,6 +381,17 @@ ParsedRequest parseRequest(const std::string& text) {
         }
         storeInteger(parsed.request, arg.flag, number);
     }
+    if ((operation->args & kSideArg) != 0) {
+        const Json* side = member(args, "side");
+        if (side == nullptr) {
+            return fail(parsed, ErrorCode::BadRequest,
+                        std::string(operation->name) + " needs the argument \"side\".");
+        }
+        if (*side != "left" && *side != "right") {
+            return fail(parsed, ErrorCode::BadRequest, "\"side\" must be \"left\" or \"right\".");
+        }
+        parsed.request.side = (*side == "left") ? Side::Left : Side::Right;
+    }
 
     parsed.status = okStatus();
     return parsed;
@@ -374,12 +406,19 @@ Json nodeOrNull(NodeId id) {
 
 // Only the fields of this structure (operation-contract.md, 5.4).
 Json snapshotJson(const Snapshot& snapshot) {
+    const bool linear = isLinear(snapshot.structure);
     Json nodes = Json::array();
     for (const NodeView& node : snapshot.nodes) {
         Json item = Json::object();
         item["id"] = node.id;
         item["value"] = node.value;
-        item["next"] = nodeOrNull(node.next);
+        if (linear) {
+            item["next"] = nodeOrNull(node.next);
+        } else {
+            item["left"] = nodeOrNull(node.left);
+            item["right"] = nodeOrNull(node.right);
+            item["parent"] = nodeOrNull(node.parent);
+        }
         nodes.push_back(std::move(item));
     }
 
@@ -396,6 +435,9 @@ Json snapshotJson(const Snapshot& snapshot) {
             break;
         case StructureKind::List:
             json["head"] = nodeOrNull(snapshot.head);
+            break;
+        case StructureKind::BinaryTree:
+            json["root"] = nodeOrNull(snapshot.root);
             break;
     }
     json["nodes"] = std::move(nodes);

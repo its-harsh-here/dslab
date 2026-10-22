@@ -22,6 +22,15 @@ enum class Operation {
     DeleteNode,
     Search,
     Reverse,
+    // binary tree
+    AddRoot,
+    AddChild,
+    DeleteSubtree,
+    // trees
+    Preorder,
+    Inorder,
+    Postorder,
+    Levelorder,
     // shared by every structure
     Clear
 };
@@ -36,6 +45,9 @@ inline bool isMutating(Operation operation) {
         case Operation::InsertAt:
         case Operation::DeleteNode:
         case Operation::Reverse:
+        case Operation::AddRoot:
+        case Operation::AddChild:
+        case Operation::DeleteSubtree:
         case Operation::Clear:
             return true;
         default:
@@ -51,6 +63,8 @@ struct Request {
     Value value = 0;
     std::int32_t index = 0;
     NodeId nodeId = kNoNode;
+    NodeId parentId = kNoNode;
+    Side side = Side::Left;
 };
 
 }  // namespace dslab

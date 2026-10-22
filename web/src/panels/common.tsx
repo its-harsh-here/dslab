@@ -95,6 +95,9 @@ function describeResult(operation: string | null, data: Readonly<Record<string, 
     case 'push':
     case 'enqueue':
     case 'insertAt':
+    case 'addRoot':
+    case 'addChild':
+    case 'insert':
       return `${operation} → created node #${data.nodeId}`;
     case 'pop':
     case 'dequeue':
@@ -105,6 +108,15 @@ function describeResult(operation: string | null, data: Readonly<Record<string, 
       return `search → found node #${data.nodeId}` + (typeof data.index === 'number' ? ` at index ${data.index}` : '');
     case 'reverse':
       return 'reverse → done';
+    case 'deleteSubtree':
+      return `deleteSubtree → freed ${nodes(data.removedCount)}: #${(data.removedIds as readonly number[]).join(', #')}`;
+    case 'preorder':
+    case 'inorder':
+    case 'postorder':
+    case 'levelorder': {
+      const values = data.values as readonly number[];
+      return `${operation} → ${values.length > 0 ? values.join(', ') : '(empty tree)'}`;
+    }
     case 'peek':
     case 'front':
       return `${operation} → ${data.value} (node #${data.nodeId})`;

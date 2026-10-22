@@ -23,6 +23,8 @@ enum class ErrorCode {
     EmptyStructure,
     IndexOutOfRange,
     NodeNotFound,
+    RootExists,
+    ChildExists,
     // Should never happen.
     InternalError
 };
