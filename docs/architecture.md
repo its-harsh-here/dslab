@@ -518,6 +518,7 @@ dslab/
 │   └── third_party/              nlohmann/json.hpp, doctest/doctest.h (+ licences, VERSION)
 ├── web/
 │   ├── index.html
+│   ├── public/                   favicon.svg, apple-touch-icon.png (tab icon)  (milestone 9)
 │   ├── src/
 │   │   ├── engine/  playback/  layout/  render/  panels/  ui/
 │   │   └── generated/            Emscripten output: gitignored, never edited
