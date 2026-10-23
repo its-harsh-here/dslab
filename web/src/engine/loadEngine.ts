@@ -1,8 +1,8 @@
 // Loads the C++ engine (WebAssembly) once per page.
 //
 // The .wasm URL is explicit: Vite's "?url" import gives the built asset's URL,
-// which with `base: './'` is relative to the deployed files, so it also works
-// under a GitHub Pages sub-path. We fetch and compile the file ourselves so
+// which starts with the site's base path (/dslab/, vite.config.ts), so it works
+// under the GitHub Pages sub-path. We fetch and compile the file ourselves so
 // that any failure names the exact file, URL and cause.
 import createDslabEngine from '../generated/dslab_engine.mjs';
 import wasmAssetUrl from '../generated/dslab_engine.wasm?url';

@@ -384,19 +384,31 @@ Still open, not part of this request:
 
 ---
 
-## Milestone 9: deployment
+## Milestone 9: deployment and documentation
 
-- [ ] The owner creates or approves the GitHub repository. Nothing is pushed without
-      asking.
-- [ ] `.github/workflows/ci.yml`: Ubuntu runner, emsdk pinned to the version in
-      toolchain.md (cached), Node 24, `npm ci`, `test:cpp`, `test:cpp:asan`, `build:wasm`,
-      `build`, Playwright Chromium install, `test:e2e`.
-- [ ] Deploy job on `main`: upload `dist/` and publish with GitHub Pages actions.
-- [ ] The live site loads the Wasm file with no console errors, at a sub-path (relative
-      `base`).
-- [ ] The Playwright smoke suite passes against the live URL.
-- [ ] `README.md`: what DSLab is, the live link, how to run locally, the command list, and
-      links to the docs.
+Rewritten to match the milestone request.
 
-**Definition of done:** CI is green on `main`, the public URL works in Chromium and
-Firefox, and the owner has the link.
+- [x] Emscripten pinned in one file, `.emsdk-version` (6.0.13), read by
+      `scripts/build-wasm.sh`, `scripts/check-env.sh`, the README's install commands and
+      CI. `package-lock.json` committed (tracked since milestone 2; CI uses `npm ci`).
+- [x] Vite `base: '/dslab/'`: the JS bundle and the `.wasm` file load from
+      `/dslab/assets/`. `npm run dev`, `npm run preview` and the Playwright suite use the
+      same path; `web/e2e/smoke.spec.ts` checks the asset paths.
+- [x] `.github/workflows/deploy.yml` on `ubuntu-latest`: pinned emsdk, Node 24, `npm ci`,
+      `npm run test:cpp`, `npm run build`, Playwright's bundled Chromium,
+      `npm run test:e2e:smoke` (tests tagged `@smoke`) against `npm run preview`, then
+      `configure-pages`, `upload-pages-artifact` and `deploy-pages`.
+- [x] The GitHub settings to change, documented in the README ("Deployment").
+- [x] README: setup, build, test, usage, deployment, known limitations.
+- [x] docs/architecture.md updated, with the table of C++ algorithm files versus browser
+      presentation files; new docs/complexity.md, docs/memory.md,
+      docs/trace-playback.md, docs/demo-script.md, docs/viva-questions.md (30 questions).
+- [ ] The owner creates the public GitHub repository `dslab`, pushes `main` and sets
+      Settings → Pages → Source to GitHub Actions.
+
+**Definition of done:**
+
+1. A fresh clone into a temporary directory builds and passes all tests using only the
+   README commands.
+2. A successful workflow run (checked with `gh`) and the live site opened with Playwright
+   MCP; both URLs reported.

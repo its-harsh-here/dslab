@@ -1256,9 +1256,10 @@ All of these live in `engine/include/dslab/Limits.h`; tests check each bound.
    destructor chain.
 7. **Snapshots, frames, history entries, requests and responses are plain values** (IDs
    and integers, no pointers). Copying them can never create a dangling pointer.
-8. **Only IDs cross into JavaScript.** JavaScript never holds a node pointer. It owns
-   one Embind `Engine` handle and calls `.delete()` on it only when the page module is
-   disposed (Vite hot reload).
+8. **Only IDs cross into JavaScript.** JavaScript never holds a node pointer. The page
+   owns one Embind `Engine` handle for its whole lifetime and never calls `.delete()` on
+   it (it is released with the page); engines created by the end-to-end tests are
+   deleted with `.delete()` after use.
 9. **ASan + UBSan** run the full native suite (milestone 2 onward) to catch any use of a
    freed node.
 

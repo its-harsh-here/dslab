@@ -1,0 +1,84 @@
+# DSLab: test, build and deploy to GitHub Pages (https://<user>.github.io/dslab/).
+#
+# Runs on every push to main, and by hand from the Actions tab. The site is
+# deployed only if the C++ tests, the build and the browser smoke tests pass.
+# The Emscripten version comes from .emsdk-version, the same file the build
+# script and the README read.
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# What the workflow's token may do: read the code, publish to Pages, and prove
+# its identity to Pages (id-token).
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits instead of cancelling one that
+# is already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Install the pinned Emscripten (.emsdk-version)
+        run: |
+          version="$(tr -d '[:space:]' < .emsdk-version)"
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$version"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$version"
+          # scripts/build-wasm.sh finds Emscripten through EMSDK.
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+
+      - name: Install Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install the web dependencies (exact versions from package-lock.json)
+        run: npm ci
+
+      - name: Native build and C++ tests
+        run: npm run test:cpp
+
+      - name: Build the WebAssembly engine and the site
+        run: npm run build
+
+      - name: Install Playwright's bundled Chromium
+        run: npx playwright install --with-deps --no-shell chromium
+
+      - name: Browser smoke tests against npm run preview
+        run: npm run test:e2e:smoke
+
+      - name: Prepare GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload the site (dist/)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,16 +1,20 @@
 # Toolchain
 
-Pinned tool versions for DSLab. `scripts/check-env.sh` reads the `emsdk:` line
-below and fails if `em++ --version` reports a different version. CI will pin the
-same version later.
+Pinned tool versions for DSLab.
 
-emsdk: 6.0.13
+The Emscripten version is written in one place only: the file
+[`.emsdk-version`](../.emsdk-version) at the repository root. `scripts/build-wasm.sh`
+and `scripts/check-env.sh` read it and refuse any other `em++`; the GitHub Actions
+workflow (`.github/workflows/deploy.yml`) installs the version it names; the README's
+install commands read it with `$(cat .emsdk-version)`. To change the version, edit that
+file, install and activate the new version locally, and run all the tests.
 
 ## Emscripten
 
 Installed on 2026-10-22 with `./emsdk install latest` and `./emsdk activate latest`
 on Ubuntu 24.04.5 LTS, WSL 2, aarch64. On ARM64 Linux, `latest` can trail x64,
-so always pin the number above rather than `latest`.
+so always pin a number in `.emsdk-version` rather than `latest`. The record below is
+of the version tested locally (6.0.13, the value in `.emsdk-version` on 2026-10-23).
 
 Exact first line of `em++ --version`:
 
@@ -20,10 +24,10 @@ Exact first line of `em++ --version`:
 - SDK: `sdk-releases-eb132757325583b787fe9414b09afea9442b72ad-64bit`
 - Node bundled with emsdk: 24.19.0 (used by `em++` only; your shell uses nvm's Node)
 
-To reproduce elsewhere (CI included):
+To reproduce elsewhere (CI does the same), from the repository root:
 
-    ./emsdk install 6.0.13
-    ./emsdk activate 6.0.13
+    ~/tools/emsdk/emsdk install "$(cat .emsdk-version)"
+    ~/tools/emsdk/emsdk activate "$(cat .emsdk-version)"
 
 ## Other tools (as found on 2026-10-22)
 

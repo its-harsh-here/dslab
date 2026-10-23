@@ -2,6 +2,7 @@
 // recorded for it: nodes, values, IDs, colors, AVL labels, edges, highlights,
 // pointer labels, explanation, step line and traversal output. The expected
 // frames come from replaying the same requests on a separate engine.
+// Tagged @smoke: CI also runs these before deploying (npm run test:e2e:smoke).
 import { expectEveryStep, finish, open, replay, test, type Request } from './support';
 
 async function batch(page: import('@playwright/test').Page, values: string, button: string) {
@@ -13,7 +14,7 @@ async function batch(page: import('@playwright/test').Page, values: string, butt
 const inserts = (structure: string, values: number[], operation = 'insert'): Request[] =>
   values.map((value) => ({ structure, operation, args: { value } }));
 
-test('stack: every step of a pop', async ({ page }) => {
+test('stack: every step of a pop', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'stack');
   await batch(page, '10, 20, 30', 'Push all');
   await page.getByRole('button', { name: 'Pop', exact: true }).click();
@@ -21,7 +22,7 @@ test('stack: every step of a pop', async ({ page }) => {
   await expectEveryStep(page, responses.at(-1)!, 'stack');
 });
 
-test('queue: every step of a dequeue', async ({ page }) => {
+test('queue: every step of a dequeue', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'queue');
   await batch(page, '1, 2, 3', 'Enqueue all');
   await page.getByRole('button', { name: 'Dequeue', exact: true }).click();
@@ -29,7 +30,7 @@ test('queue: every step of a dequeue', async ({ page }) => {
   await expectEveryStep(page, responses.at(-1)!, 'chain');
 });
 
-test('list: every step of an insert in the middle', async ({ page }) => {
+test('list: every step of an insert in the middle', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'list');
   const requests: Request[] = [];
   for (const [index, value] of [[0, 5], [1, 7], [1, 6]]) {
@@ -43,7 +44,7 @@ test('list: every step of an insert in the middle', async ({ page }) => {
   await expectEveryStep(page, responses.at(-1)!, 'chain');
 });
 
-test('binary tree: every step of an in-order traversal, with the output building up', async ({ page }) => {
+test('binary tree: every step of an in-order traversal, with the output building up', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'binaryTree');
   await page.locator('#tree-value').fill('1');
   await page.getByRole('button', { name: 'Add root', exact: true }).click();
@@ -69,7 +70,7 @@ test('binary tree: every step of an in-order traversal, with the output building
   await expectEveryStep(page, responses.at(-1)!, 'tree');
 });
 
-test('BST: every step of a delete with a deeper successor', async ({ page }) => {
+test('BST: every step of a delete with a deeper successor', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'bst');
   await batch(page, '50, 30, 70, 20, 40, 60, 80, 65', 'Insert all');
   await page.locator('#binarysearchtree-value').fill('50');
@@ -78,7 +79,7 @@ test('BST: every step of a delete with a deeper successor', async ({ page }) => 
   await expectEveryStep(page, responses.at(-1)!, 'tree');
 });
 
-test('AVL: every step of an LR rotation, with heights and balances', async ({ page }) => {
+test('AVL: every step of an LR rotation, with heights and balances', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'avl');
   await batch(page, '30, 10', 'Insert all');
   await page.locator('#avltree-value').fill('20');
@@ -87,7 +88,7 @@ test('AVL: every step of an LR rotation, with heights and balances', async ({ pa
   await expectEveryStep(page, responses.at(-1)!, 'tree');
 });
 
-test('red-black: every step of a delete (cases 3 and 4), with colors and NIL leaves shown', async ({ page }) => {
+test('red-black: every step of a delete (cases 3 and 4), with colors and NIL leaves shown', { tag: '@smoke' }, async ({ page }) => {
   await open(page, 'redBlack');
   await page.getByLabel('Show NIL leaves').check();
   await batch(page, '10, 20, 40, 30', 'Insert all');

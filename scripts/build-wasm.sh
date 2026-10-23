@@ -31,7 +31,7 @@ Point EMSDK at your emsdk folder, for example:  export EMSDK=\$HOME/tools/emsdk"
   set -u
   found_via="EMSDK=$EMSDK"
   command -v em++ > /dev/null || fail "Sourced $EMSDK/emsdk_env.sh, but em++ is still not on PATH.
-Activate the pinned version (docs/toolchain.md):  $EMSDK/emsdk activate <version>"
+Activate the pinned version (.emsdk-version):  $EMSDK/emsdk activate $(cat "$ROOT/.emsdk-version")"
 elif command -v em++ > /dev/null; then
   found_via="em++ on PATH at $(command -v em++)"
 else
@@ -43,11 +43,11 @@ Installing emsdk for the first time: see README.md, 'Prerequisites'."
 fi
 command -v emcmake > /dev/null || fail "em++ was found ($found_via), but emcmake was not. Is the emsdk installation complete?"
 
-# 2. Check the pinned version ---------------------------------------------------
-pinned="$(sed -n 's/^emsdk: *//p' "$ROOT/docs/toolchain.md" | head -n 1)"
+# 2. Check the pinned version (.emsdk-version: the one place it is written) -----
+pinned="$(tr -d '[:space:]' < "$ROOT/.emsdk-version")"
 found="$(em++ --version | head -n 1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
 if [ "$found" != "$pinned" ]; then
-  fail "em++ is version $found ($found_via), but docs/toolchain.md pins $pinned.
+  fail "em++ is version $found ($found_via), but .emsdk-version pins $pinned.
 Install and activate the pinned version:  emsdk install $pinned && emsdk activate $pinned"
 fi
 echo "build:wasm: em++ $found ($found_via)"

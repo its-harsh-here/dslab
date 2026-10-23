@@ -76,7 +76,7 @@ export interface Request {
 
 /** Opens one structure's page and waits for the engine. */
 export async function open(page: Page, structure: string) {
-  await page.goto(`/#${structure}`);
+  await page.goto(`./#${structure}`); // relative to baseURL, which ends in /dslab/
   await expect(page.locator('.workspace')).toBeVisible();
   await expect(statusLine(page)).toContainText('Ready');
 }

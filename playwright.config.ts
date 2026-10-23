@@ -16,7 +16,8 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: 'test-results',
   use: {
-    baseURL: 'http://localhost:4173/',
+    // The same base path as the deployed site (vite.config.ts).
+    baseURL: 'http://localhost:4173/dslab/',
     browserName: 'chromium',
     channel: 'chromium',
     viewport: { width: 1440, height: 900 },
@@ -24,7 +25,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173/',
+    url: 'http://localhost:4173/dslab/',
     reuseExistingServer: false,
     timeout: 60_000,
   },

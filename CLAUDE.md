@@ -7,22 +7,22 @@ Embind) for a React + TypeScript + Vite site that renders with SVG. No backend.
 Before changing engine code, read docs/architecture.md and docs/operation-contract.md
 (wire schema, error codes, limits, decisions). The milestone checklist is docs/plan.md.
 
-## Commands
+## Commands (keep this list current)
 - `npm run test:cpp` — native CMake build (build/native) + doctest tests
 - `npm run test:cpp:asan` — the same tests with ASan + UBSan at -O1 (build/asan, ~25 min)
 - `npm run build:wasm` — Emscripten build (build/wasm), copied into web/src/generated/.
   Needs `EMSDK` set or em++ on PATH; in your shell: `export EMSDK=~/tools/emsdk`
-- `npm run dev` — build:wasm, then the Vite dev server on http://localhost:5173/
+- `npm run dev` — build:wasm, then Vite on http://localhost:5173/dslab/ (base /dslab/)
 - `npm run build` / `npm run preview` — build:wasm + tsc + Vite build into dist/ / serve it
 - `bash scripts/check-env.sh` — verify the toolchain
 - `npm run test:e2e` — build, native dslab_cli, then Playwright (web/e2e) against
-  `npm run preview`, channel "chromium" (bundled). Keep this list current.
+  `npm run preview`, channel "chromium" (bundled); `test:e2e:smoke` = @smoke only (CI).
 
 ## Environment
 - Ubuntu on WSL2, ARM64 (aarch64). Project lives in ~/projects/dslab, never /mnt/c.
 - Node via nvm (`~/.nvm/nvm.sh`). Emscripten at `$EMSDK`, else `~/tools/emsdk`
   (`source ~/tools/emsdk/emsdk_env.sh`). Your shell may not load my profile:
-  source these explicitly when a command needs them. Pinned emsdk version: docs/toolchain.md.
+  source these explicitly when a command needs them. Pinned emsdk version: .emsdk-version.
 - Playwright: bundled Chromium only. Never `channel: "chrome"`; Chrome does not exist
   for Linux ARM64.
 - Never run `sudo`; I have to type the password. Put privileged steps in a script and
@@ -67,8 +67,8 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
 
 ## Layout
 engine/include · engine/src · engine/tests · engine/bindings · engine/third_party ·
-web/src · web/e2e · scripts · docs. web/src/generated/ is Emscripten output (gitignored
-from milestone 2), never edited by hand.
+web/src · web/e2e · scripts · docs · .github/workflows (CI + GitHub Pages deploy).
+web/src/generated/ is Emscripten output (gitignored), never edited by hand.
 
 ## Workflow
 - Stay inside the current milestone's scope; stop when its definition of done is met.

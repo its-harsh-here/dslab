@@ -1,12 +1,16 @@
 # DSLab architecture
 
-Milestone 1 document. It covers the components, who owns what, and the path from a
-button click to C++ and back to SVG. Read it together with:
+Written in milestone 1 and kept current since (last update: milestone 9, deployment).
+It covers the components, who owns what, and the path from a button click to C++ and back
+to SVG. Read it together with:
 
 - [operation-contract.md](operation-contract.md): operations, error codes, the JSON wire
   schema, the frame schema, limits, node ownership and the list of decisions;
 - [plan.md](plan.md): milestones and their definitions of done;
-- [toolchain.md](toolchain.md): pinned tool versions.
+- [toolchain.md](toolchain.md): pinned tool versions;
+- [complexity.md](complexity.md): time complexity, with tracing and rendering cost apart;
+- [memory.md](memory.md): node ownership and memory management;
+- [trace-playback.md](trace-playback.md): frames, playback, undo/redo.
 
 If code and this document disagree, fix one of them in the same change. Do not leave
 them out of step.
@@ -48,6 +52,20 @@ single `Engine` handle ever reaches JavaScript.
 | Playback (which frame is shown) | TypeScript | step, play, pause, scrub | create or merge frames |
 | Rendering | TypeScript | draw SVG, animate between frames | — |
 
+### Which files hold C++ algorithms and which hold browser presentation
+
+Every data-structure algorithm is in the first group. Nothing in the second group decides
+an outcome; it only lays out, plays back, draws and collects input.
+
+| Group | Files | What they hold |
+| --- | --- | --- |
+| **C++ algorithms** (the teaching structures) | `engine/src/Stack.cpp`, `Queue.cpp`, `SinglyLinkedList.cpp`, `BinaryTree.cpp`, `Bst.cpp`, `AvlTree.cpp`, `RedBlackTree.cpp` with their headers in `engine/include/dslab/`; `engine/include/dslab/TreeTraversal.h` | push/pop, enqueue/dequeue, list insert/delete/search/reverse, tree add/delete-subtree, BST/AVL/red-black insert, delete, search, rotations, fix-ups, and the four traversals. Every frame is recorded here, inside the running algorithm |
+| C++ engine support (no data-structure algorithm) | `engine/include/dslab/NodePool.h`, `Trace.h`/`Trace.cpp`, `Frame.h`, `Counters.h`, `Snapshot.h`, `Limits.h`, `Types.h`, `Result.h`, `Request.h`, `Response.h`, `History.h`/`History.cpp`, `Validate.h`/`Validate.cpp`, `Catalog.h`/`Catalog.cpp`, `Engine.h`/`Engine.cpp` | node ownership, frame recording, undo/redo history, import validation, the pseudocode catalog, dispatch |
+| C++ boundary | `engine/src/json/Protocol.cpp` (+ `include/dslab/json/Protocol.h`), `engine/bindings/wasm_bindings.cpp`, `engine/tools/dslab_cli.cpp` | JSON in and out (the only code that uses nlohmann/json), the Embind class, the native command runner for tests |
+| **Browser presentation** (TypeScript, React, SVG) | `web/src/App.tsx`, `main.tsx`; `web/src/ui/*`; `web/src/panels/*`; `web/src/render/*`; `web/src/layout/*`; `web/src/playback/*`; `web/src/engine/*` (loading the Wasm file, sending JSON); `web/src/styles.css` | layout (x, y from links), playback timing, SVG drawing, panels, input forms, keyboard shortcuts. `ui/random.ts` and `panels/examples.ts` only produce **input values** for examples; every insert still runs in C++ |
+| Generated | `web/src/generated/` | Emscripten output (`dslab_engine.mjs`, `.wasm`, `.d.mts`): never edited, never committed |
+| Tests | `engine/tests/` (doctest, invariant checkers, golden files, import fixtures), `web/e2e/` (Playwright) | section 7 |
+
 ---
 
 ## 2. Components
@@ -73,7 +91,7 @@ The file list is the plan for milestone 2 onward; update it when files change.
 | `Request.h`, `Response.h` | Plain C++ request and response types (no JSON). |
 | `Engine.h/.cpp` | Owns one instance of each structure plus its `History`. `Response apply(const Request&)` dispatches with plain `switch` statements. |
 
-**Status after milestone 7:** `Limits`, `Types`, `Result`, `Snapshot`, `Frame`,
+**Status (unchanged since milestone 7):** `Limits`, `Types`, `Result`, `Snapshot`, `Frame`,
 `Counters`, `Trace`, `NodePool`, `History`, `Validate`, `Catalog`, `Request`,
 `Response`, `Engine`, `TreeTraversal` and all seven structures (`Stack`, `Queue`,
 `SinglyLinkedList`, `BinaryTree`, `Bst`, `AvlTree`, `RedBlackTree`) exist. `AvlTree` is
@@ -123,9 +141,9 @@ keys come out in the documented order). Algorithm classes never see JSON.
   validates the request shape, builds a `Request`, calls `Engine::apply`, writes the
   response. A `try/catch (...)` around the whole call turns any unexpected C++ exception
   into an `INTERNAL_ERROR` response instead of aborting the Wasm module.
-- For now `Protocol.cpp` holds both halves: reading requests and writing responses.
-  When export arrives it splits into `SnapshotJson.cpp`, `FrameJson.cpp` and
-  `ExportJson.cpp`.
+- `Protocol.cpp` holds both halves: reading requests (and export documents for import)
+  and writing responses and export documents. It stayed one file through milestone 9;
+  splitting it is not needed while it reads top to bottom in one sitting.
 - Responses are written frame by frame: one frame's JSON object is built, dumped and
   appended to the output string, then discarded. A JSON tree of the whole response is
   never held in memory.
@@ -143,9 +161,10 @@ One file, `wasm_bindings.cpp`, compiled only by Emscripten:
   `.constructor<>()` and `.function("handle", &WasmEngine::handle)`.
 
 Embind converts JavaScript strings to and from UTF-8 `std::string`. All protocol text is
-ASCII, so no encoding questions arise. JavaScript owns the one `Engine` handle and must
-call `.delete()` on it when finished; the app keeps it for the page lifetime and deletes
-it only on Vite hot-module dispose.
+ASCII, so no encoding questions arise. JavaScript owns the one `Engine` handle. The page
+keeps it for its whole lifetime and never calls `.delete()` on it: it is released with
+the page. Engines that the end-to-end tests create through `window.__dslab` are deleted
+with `.delete()` after use.
 
 ### 2.5 Native tests: `engine/tests/`
 
@@ -187,8 +206,10 @@ Two React rules matter here, both from the React docs:
 
 ### 2.8 Scripts and docs
 
-`scripts/` holds `check-env.sh`, `setup-system.sh` (privileged; the owner runs it) and,
-from milestone 2, `build-wasm.sh`. `docs/` holds these documents and `toolchain.md`.
+`scripts/` holds `check-env.sh`, `setup-system.sh` (privileged; the owner runs it),
+`build-wasm.sh` and `make-parity-commands.py`. `docs/` holds these documents.
+`.emsdk-version` holds the pinned Emscripten version, the only place it is written
+(section 4). `.github/workflows/deploy.yml` is the CI and deployment workflow (section 4).
 
 ---
 
@@ -324,7 +345,7 @@ of this exchange is worked example 2 in operation-contract.md.
 click ─▶ form (syntax) ─▶ client.send ─▶ engine.handle(JSON) ═══ Wasm ═══▶ handleJson
                                                                            │ parse/validate
                                                                            ▼
-SVG ◀─ render ◀─ layout ◀─ player ◀─ reducer ◀─ JSON.parse ◀═══ response ◀─ Engine::apply
+SVG ◀─ render ◀─ layout ◀─ animation ◀─ player ◀─ JSON.parse ◀═══ response ◀─ Engine::apply
                                                                            │ Bst::insert
                                                                            │  └─ trace.frame(...) × 6
 ```
@@ -339,7 +360,7 @@ SVG ◀─ render ◀─ layout ◀─ player ◀─ reducer ◀─ JSON.parse �
 | Native sanitizers | `build/asan` | `npm run test:cpp:asan` | `-O1 -fsanitize=address,undefined -fno-omit-frame-pointer`. `-O1` is what the ASan documentation recommends: at `-O0`, the default stack-use-after-return check (a "fake stack" frame on every call) made the suite hundreds of times slower than native and it never finished. All checks stay on. |
 | Native command runner | `build/native` | `cmake --build --preset native --target dslab_cli` (part of `npm run test:e2e`) | `engine/tools/dslab_cli.cpp`: one JSON request per input line through `handleJson`, one response per output line; the native side of the native-versus-Wasm comparison |
 | WebAssembly | `build/wasm` | `npm run build:wasm` | `scripts/build-wasm.sh` sources emsdk, runs `emcmake cmake` and copies outputs to `web/src/generated/` |
-| Website | `dist/` | `npm run build` | Vite, `root: "web"`, `build.outDir: "../dist"`, `base: "./"` |
+| Website | `dist/` | `npm run build` | Vite, `root: "web"`, `build.outDir: "../dist"`, `base: "/dslab/"` (the GitHub Pages path) |
 
 The native and Wasm build directories never share a cache (CLAUDE.md). All of them are
 gitignored already (`build/`, `dist/`, `*.wasm`). Milestone 2 adds `web/src/generated/`
@@ -362,10 +383,12 @@ Emscripten flags (all confirmed with the pinned emsdk 6.0.13 in milestone 2, in
 Loading in the browser (`web/src/engine/loadEngine.ts`):
 
 1. Import the factory from `../generated/dslab_engine.mjs`, and the Wasm file's URL with
-   Vite's `?url` suffix. With `base: "./"` Vite compiles that URL to
-   `new URL("assets/dslab_engine-<hash>.wasm", import.meta.url)`, which is relative to
-   the bundle itself. It therefore works at `/` and under a sub-path such as
-   `/dslab/`, which was checked by serving `dist/` under `/dslab/`.
+   Vite's `?url` suffix. With `base: "/dslab/"` Vite writes that URL as
+   `/dslab/assets/dslab_engine-<hash>.wasm`, and `index.html` loads the bundle from
+   `/dslab/assets/index-<hash>.js`. `npm run dev` and `npm run preview` serve under the
+   same path (http://localhost:5173/dslab/, http://localhost:4173/dslab/), so local runs
+   and the end-to-end tests use the deployed URLs; `web/e2e/smoke.spec.ts` checks that the
+   JavaScript and the `.wasm` file load from `/dslab/assets/`.
 2. `fetch` the URL and `WebAssembly.compile` the bytes ourselves, so every failure can
    name the file, the full URL and the cause (network error, HTTP status, not valid
    WebAssembly). `EngineLoadErrorView` shows these with a fix.
@@ -379,6 +402,19 @@ Loading in the browser (`web/src/engine/loadEngine.ts`):
 Supported browsers are Vite 8's default build target: Chrome/Edge 111+, Firefox 114+,
 Safari 16.4+. All of them support WebAssembly exception handling.
 
+### Continuous integration and deployment
+
+`.github/workflows/deploy.yml` runs on every push to `main` (and by hand). Job `build`
+on `ubuntu-latest`: install Ninja; clone emsdk and install and activate the version in
+`.emsdk-version`; Node 24 with `npm ci` (exact versions from `package-lock.json`);
+`npm run test:cpp`; `npm run build`; `npx playwright install --with-deps --no-shell chromium`;
+`npm run test:e2e:smoke` (the tests tagged `@smoke`: every structure's frames on screen,
+and the `/dslab/` asset paths) against `npm run preview`; then the official Pages actions
+`configure-pages` and `upload-pages-artifact` (`dist/`). Job `deploy` (needs `build`)
+publishes with `deploy-pages` to the `github-pages` environment. A failing test stops the
+deployment. The sanitizer suite (about 25 minutes) and the full e2e suite are run locally
+before a release, not on every push.
+
 ---
 
 ## 5. Cost model: algorithm versus tracing versus rendering (rule 11)
@@ -389,8 +425,10 @@ Three costs are always reported and documented separately:
 | --- | --- | --- |
 | **Algorithm** | The data-structure work itself: key comparisons, nodes visited, links changed, rotations, recolors. Shown as Big-O in the catalog and as counters in `metrics.algorithm`. | Per operation, for example BST insert O(h), AVL insert O(log n). Table in operation-contract.md. |
 | **Tracing** | Copying a snapshot into every frame and serializing it. Shown in `metrics.trace` (`frames`, `snapshotNodes`). | O(F × n) time and memory per operation, F ≤ 512 frames, n ≤ 200 nodes. |
-| **Support** | Pool bookkeeping (vector insert/erase, O(n)), ID lookup (binary search, O(log n)), history snapshot (O(n)). These stand in for `new`, `delete` and "the caller already has the pointer". | Not counted in algorithm counters; documented here. |
+| **Support** | Pool bookkeeping (append O(1), erase O(n)), ID lookup (linear search, O(n), n ≤ 200), history snapshot (O(n)), `restore()` (O(n²)). These stand in for `new`, `delete` and "the caller already has the pointer". | Not counted in algorithm counters; documented here and in complexity.md. |
 | **Rendering** | Layout O(n) per frame (O(F × n) per response, cached); SVG with at most 200 nodes, 199 edges and a few labels per frame. | TypeScript side only. |
+
+Per-operation tables and measured frame counts: [complexity.md](complexity.md).
 
 Memory bounds (exact numbers in operation-contract.md, "Limits"):
 
@@ -448,7 +486,8 @@ Memory bounds (exact numbers in operation-contract.md, "Limits"):
   update of operation-contract.md in the same change.
 - Export files: `format: "dslab-structure"`, `formatVersion` 1, versioned separately
   from the wire schema.
-- The emsdk version is pinned in toolchain.md, and `check-env.sh` enforces it.
+- The emsdk version is pinned in `.emsdk-version`; `build-wasm.sh` and `check-env.sh`
+  enforce it, and CI installs it.
 
 ---
 
@@ -458,8 +497,10 @@ Memory bounds (exact numbers in operation-contract.md, "Limits"):
 dslab/
 ├── CLAUDE.md                     project instructions (keep under ~80 lines)
 ├── package.json                  npm scripts listed in CLAUDE.md          (milestone 2)
-├── vite.config.ts                root "web", outDir "../dist", base "./"  (milestone 2)
-├── playwright.config.ts          bundled Chromium, preview server         (milestone 8)
+├── .emsdk-version                the pinned Emscripten version (one line) (milestone 9)
+├── .github/workflows/deploy.yml  tests, build, smoke tests, GitHub Pages  (milestone 9)
+├── vite.config.ts                root "web", outDir "../dist", base "/dslab/"
+├── playwright.config.ts          bundled Chromium, preview server at /dslab/ (milestone 8)
 ├── CMakeLists.txt                native + Emscripten builds               (milestone 2)
 ├── CMakePresets.json             native, asan, wasm presets               (milestone 2)
 ├── engine/
@@ -477,14 +518,15 @@ dslab/
 │   └── third_party/              nlohmann/json.hpp, doctest/doctest.h (+ licences, VERSION)
 ├── web/
 │   ├── index.html
-│   ├── public/                   static files (favicon)
 │   ├── src/
-│   │   ├── engine/  state/  playback/  layout/  render/  panels/
+│   │   ├── engine/  playback/  layout/  render/  panels/  ui/
 │   │   └── generated/            Emscripten output: gitignored, never edited
 │   └── e2e/                      Playwright specs; fixtures/parity-commands.jsonl
 ├── scripts/                      check-env.sh, setup-system.sh, build-wasm.sh,
 │                                 make-parity-commands.py
-└── docs/                         architecture.md, operation-contract.md, plan.md, toolchain.md
+└── docs/                         architecture.md, operation-contract.md, plan.md, toolchain.md,
+                                  avl.md, red-black.md, complexity.md, memory.md,
+                                  trace-playback.md, demo-script.md, viva-questions.md
 ```
 
 ---
@@ -500,9 +542,9 @@ dslab/
 - `STACK_SIZE` defaults to 64 KiB and cannot grow. `ALLOW_MEMORY_GROWTH` defaults to off.
 - Exceptions: catching is off by default (a `throw` aborts). `-fwasm-exceptions` is
   needed at compile and link time. `WASM_LEGACY_EXCEPTIONS` defaults to true.
-- Vite 8: needs Node `^20.19.0 || >=22.12.0`; `?url` imports give an asset URL; `base`
-  accepts `"./"` for relative deployment; default `build.target` is Chrome 111, Edge 111,
-  Firefox 114, Safari 16.4.
+- Vite 8: needs Node `^20.19.0 || >=22.12.0`; `?url` imports give an asset URL that
+  starts with `base`; default `build.target` is Chrome 111, Edge 111, Firefox 114,
+  Safari 16.4.
 - React: StrictMode runs effects setup → cleanup → setup, and calls updater and reducer
   functions twice in development. Hence the two rules in section 2.7.
 - nlohmann/json: `parse(text, nullptr, false)` returns a value for which
@@ -518,5 +560,6 @@ Found by inspecting the generated output in milestone 2:
 - `requestAnimationFrame` timestamps can be slightly earlier than a `performance.now()`
   taken just before scheduling. Elapsed time is clamped at 0, because this caused a crash
   on first render.
-- ASan's default stack-use-after-return detection makes the native suite about 20×
-  slower on this ARM64 machine (about 3 minutes in total). It is left on.
+- ASan's default stack-use-after-return detection made the `-O0` native suite hundreds of
+  times slower on this ARM64 machine; with `-O1` (section 4) the whole suite takes about
+  25 minutes with every check left on.

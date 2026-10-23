@@ -116,13 +116,13 @@ else
 fi
 
 # --- Emscripten -----------------------------------------------------------------------
-pinned="$(sed -n 's/^emsdk: *//p' "$ROOT/docs/toolchain.md" 2>/dev/null | head -n 1)"
+pinned="$(tr -d '[:space:]' < "$ROOT/.emsdk-version" 2>/dev/null)"
 if command -v em++ > /dev/null; then
   found="$(first_version "$(em++ --version 2>&1 | head -n 1)")"
   if [ -n "$pinned" ] && [ "$found" = "$pinned" ]; then
-    pass "em++ (emsdk)" "$found, matches docs/toolchain.md"
+    pass "em++ (emsdk)" "$found, matches .emsdk-version"
   else
-    fail "em++ (emsdk)" "$found, but docs/toolchain.md pins '${pinned:-nothing}'"
+    fail "em++ (emsdk)" "$found, but .emsdk-version pins '${pinned:-nothing}'"
   fi
 else
   fail "em++ (emsdk)" "em++ not found (looked in $EMSDK_DIR)"

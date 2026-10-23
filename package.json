@@ -11,6 +11,7 @@
     "test:cpp": "cmake --preset native && cmake --build --preset native && ctest --preset native",
     "test:cpp:asan": "cmake --preset asan && cmake --build --preset asan && ctest --preset asan",
     "test:e2e": "npm run build && cmake --preset native && cmake --build --preset native --target dslab_cli && playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "build:wasm": "bash scripts/build-wasm.sh",
     "dev": "npm run build:wasm && vite",
     "build": "npm run build:wasm && tsc -p tsconfig.json && vite build",
