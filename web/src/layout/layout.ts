@@ -149,3 +149,27 @@ export function viewBoxFor(layouts: readonly Layout[], box: Box): ViewBox {
     height: maxY + box.height + box.padBottom - y,
   };
 }
+
+/**
+ * Where an operation acts: one box around every node any of its frames
+ * highlights (at that frame's position), or null when nothing is highlighted.
+ */
+export function focusFor(frames: readonly Frame[], layouts: readonly Layout[], box: Box): ViewBox | null {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  frames.forEach((frame, index) => {
+    for (const id of frame.highlight.nodes) {
+      const at = layouts[index].nodes.get(id);
+      if (!at) continue;
+      minX = Math.min(minX, at.x);
+      minY = Math.min(minY, at.y);
+      maxX = Math.max(maxX, at.x);
+      maxY = Math.max(maxY, at.y);
+    }
+  });
+  if (minX === Infinity) return null;
+  return { x: minX - box.padLeft, y: minY - box.padTop, width: maxX - minX + box.width + box.padLeft + box.padRight,
+    height: maxY - minY + box.height + box.padTop + box.padBottom };
+}

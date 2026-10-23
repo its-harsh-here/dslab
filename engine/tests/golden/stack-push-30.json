@@ -75,6 +75,13 @@
         "pointers": {},
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 0,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "stack",
           "size": 2,
@@ -109,6 +116,13 @@
         },
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 0,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "stack",
           "size": 3,
@@ -151,6 +165,13 @@
         },
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 1,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "stack",
           "size": 3,
@@ -190,6 +211,13 @@
         },
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 2,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "stack",
           "size": 3,
@@ -227,6 +255,13 @@
         "pointers": {},
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 2,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "stack",
           "size": 3,

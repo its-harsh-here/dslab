@@ -47,6 +47,7 @@ Exact versions in `package.json`; `package-lock.json` pins the rest of the tree.
 | vite | 8.3.5 |
 | @vitejs/plugin-react | 6.1.2 |
 | typescript | 7.0.2 |
+| @playwright/test | 1.64.1 (uses chromium-1248, already installed; `playwright.config.ts` sets `channel: "chromium"`, Playwright's bundled Chromium in new headless mode, so the separate headless-shell download is not needed. Never `"chrome"`: Google Chrome does not exist for Linux ARM64.) |
 
 Vendored C++ headers (details and SHA-256 in `engine/third_party/VERSION.md`):
 nlohmann/json v3.12.0 and doctest v2.5.3.

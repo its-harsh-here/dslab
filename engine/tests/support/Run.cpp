@@ -2,6 +2,7 @@
 
 #include <doctest/doctest.h>
 
+#include "dslab/Catalog.h"
 #include "support/Checkers.h"
 
 namespace dslab::test {
@@ -19,6 +20,29 @@ const DataField& findField(const Response& response, const std::string& name) {
     return response.data.front();  // not reached: FAIL stops the test
 }
 
+// Every frame's step ID must be in the catalog listing of the operation that
+// ran (operation-contract.md 6.6, item 4); "common." steps belong to no listing.
+std::string checkStepIds(const Request& request, const Response& response) {
+    const OperationListing* listing = findListing(request.structure, request.operation);
+    for (const Frame& frame : response.frames) {
+        if (frame.stepId.rfind("common.", 0) == 0) {
+            continue;
+        }
+        if (listing == nullptr) {
+            return "operation has no catalog listing, but frame " + std::to_string(frame.index) + " has step " +
+                   frame.stepId;
+        }
+        bool listed = false;
+        for (const PseudocodeLine& line : listing->lines) {
+            listed = listed || line.stepId == frame.stepId;
+        }
+        if (!listed) {
+            return "step " + frame.stepId + " is not in the catalog listing";
+        }
+    }
+    return "";
+}
+
 }  // namespace
 
 Response run(Engine& engine, const Request& request) {
@@ -28,6 +52,10 @@ Response run(Engine& engine, const Request& request) {
     CAPTURE(wireName(request.structure));
     CHECK(checkSnapshot(response.snapshot) == "");
     CHECK(checkFrames(response, before) == "");
+    CHECK(checkStepIds(request, response) == "");
+    // The final frame shows the response's snapshot (checkFrames), and that is
+    // the engine's real state afterwards, ID counter included.
+    CHECK(response.snapshot == engine.snapshot(request.structure));
     return response;
 }
 

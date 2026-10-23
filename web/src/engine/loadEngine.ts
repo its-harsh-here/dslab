@@ -8,7 +8,7 @@ import createDslabEngine from '../generated/dslab_engine.mjs';
 import wasmAssetUrl from '../generated/dslab_engine.wasm?url';
 
 import { EngineClient } from './client';
-import { STRUCTURES, type EngineResponse, type StructureName } from './protocol';
+import { STRUCTURES, type CatalogOperation, type EngineResponse, type StructureName } from './protocol';
 
 const WASM_FILE = 'dslab_engine.wasm';
 
@@ -29,6 +29,8 @@ export interface LoadedEngine {
   readonly client: EngineClient;
   /** Each structure's state when the page opened (read-only "snapshot" requests). */
   readonly initial: Readonly<Record<StructureName, EngineResponse>>;
+  /** Each structure's pseudocode listings, read once from the C++ catalog. */
+  readonly catalogs: Readonly<Record<StructureName, readonly CatalogOperation[]>>;
 }
 
 let loading: Promise<LoadedEngine> | null = null;
@@ -82,11 +84,22 @@ async function load(): Promise<LoadedEngine> {
   }
 
   const client = new EngineClient(new module.Engine());
+  // For the end-to-end tests (web/e2e): a fresh, separate C++ engine from the same
+  // Wasm module, to replay requests and compare with the page or the native build.
+  // It never touches the page's own engine.
+  (window as unknown as { __dslab?: unknown }).__dslab = { createEngine: () => new module.Engine() };
   const initial = {} as Record<StructureName, EngineResponse>;
+  const catalogs = {} as Record<StructureName, readonly CatalogOperation[]>;
   for (const structure of STRUCTURES) {
     initial[structure] = client.send(structure, 'snapshot');
+    const catalog = client.send(structure, 'catalog');
+    if (catalog.result.status !== 'ok') {
+      throw new EngineLoadError(WASM_FILE, url, `the engine refused its catalog (${catalog.result.message}).`,
+        'Rebuild with "npm run build:wasm" so the page and the engine match.');
+    }
+    catalogs[structure] = catalog.result.data.operations as unknown as readonly CatalogOperation[];
   }
-  return { client, initial };
+  return { client, initial, catalogs };
 }
 
 /** Runs Emscripten's startup with our compiled module instead of letting it fetch one. */

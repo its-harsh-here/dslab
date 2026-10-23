@@ -60,7 +60,7 @@ TEST_CASE("Trace keeps the final frame even when the cap is reached") {
 TEST_CASE("History keeps at most 50 undo entries") {
     History history;
     for (int i = 0; i < kMaxHistory + 10; ++i) {
-        history.record(Snapshot{});
+        history.record(Snapshot{}, "push");
     }
     CHECK(history.undoCount() == kMaxHistory);
     CHECK(history.redoCount() == 0);

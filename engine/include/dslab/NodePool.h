@@ -74,6 +74,23 @@ public:
     // The ID the next created node will get.
     std::int64_t nextId() const { return nextId_; }
 
+    // For restore(): frees every node and continues counting from 'nextId'.
+    void reset(std::int64_t nextId) {
+        nodes_.clear();
+        nextId_ = nextId;
+    }
+
+    // For restore(): adds a node that keeps a known ID. IDs must arrive in
+    // ascending order, so the vector stays sorted. The counter is not changed.
+    Node* createWithId(NodeId id, Value value) {
+        std::unique_ptr<Node> owned = std::make_unique<Node>();
+        owned->id = id;
+        owned->value = value;
+        Node* node = owned.get();  // non-owning: the pool owns every node
+        nodes_.push_back(std::move(owned));
+        return node;
+    }
+
 private:
     std::vector<std::unique_ptr<Node>> nodes_;
     // 64-bit so it can step past the largest NodeId without overflowing.

@@ -1,0 +1,40 @@
+{
+  "format": "dslab-structure",
+  "formatVersion": 1,
+  "nextId": 5,
+  "snapshot": {
+    "structure": "binaryTree",
+    "size": 4,
+    "root": 1,
+    "nodes": [
+      {
+        "id": 1,
+        "value": 10,
+        "left": 2,
+        "right": 3,
+        "parent": null
+      },
+      {
+        "id": 2,
+        "value": 20,
+        "left": 4,
+        "right": null,
+        "parent": 1
+      },
+      {
+        "id": 3,
+        "value": 30,
+        "left": null,
+        "right": null,
+        "parent": 1
+      },
+      {
+        "id": 4,
+        "value": 40,
+        "left": null,
+        "right": null,
+        "parent": 2
+      }
+    ]
+  }
+}

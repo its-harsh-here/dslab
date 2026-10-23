@@ -4,10 +4,12 @@
 
 #include <vector>
 
+#include "dslab/AvlTree.h"
 #include "dslab/BinaryTree.h"
 #include "dslab/Bst.h"
 #include "dslab/History.h"
 #include "dslab/Queue.h"
+#include "dslab/RedBlackTree.h"
 #include "dslab/Request.h"
 #include "dslab/Response.h"
 #include "dslab/SinglyLinkedList.h"
@@ -38,9 +40,24 @@ private:
     Outcome runList(const Request& request, Trace& trace);
     Outcome runBinaryTree(const Request& request, Trace& trace);
     Outcome runBst(const Request& request, Trace& trace);
+    Outcome runAvl(const Request& request, Trace& trace);
+    Outcome runRedBlack(const Request& request, Trace& trace);
 
     // The shared read-only "snapshot" operation: a begin and a done frame.
     void readSnapshot(StructureKind structure, Trace& trace) const;
+    // The shared read-only "catalog" operation: a begin and a done frame. The
+    // JSON layer writes the listings themselves (Catalog.h).
+    void readCatalog(StructureKind structure, Trace& trace) const;
+
+    // The shared history and file operations (contract 2.8). Export only
+    // records its frames: the JSON layer writes the document.
+    Outcome undo(StructureKind structure, Trace& trace);
+    Outcome redo(StructureKind structure, Trace& trace);
+    Outcome exportState(StructureKind structure, Trace& trace) const;
+    Outcome importState(const Request& request, Trace& trace);
+
+    // Replaces one structure's whole state, ID counter included.
+    void restore(StructureKind structure, const Snapshot& snapshot);
 
     History& history(StructureKind structure);
     const History& history(StructureKind structure) const;
@@ -50,12 +67,16 @@ private:
     SinglyLinkedList list_;
     BinaryTree binaryTree_;
     Bst bst_;
+    AvlTree avl_;
+    RedBlackTree redBlack_;
 
     History stackHistory_;
     History queueHistory_;
     History listHistory_;
     History binaryTreeHistory_;
     History bstHistory_;
+    History avlHistory_;
+    History redBlackHistory_;
 };
 
 }  // namespace dslab

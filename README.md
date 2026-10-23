@@ -5,9 +5,13 @@ algorithm; it is compiled to WebAssembly and drawn in the browser with React and
 Every step you see is a frame recorded by the C++ code while it runs. There is no
 JavaScript copy of any algorithm and no backend.
 
-**Status:** milestone 3. Stack, queue, singly linked list, ordinary binary tree and
-binary search tree run in C++ and animate in the page, one tab each. AVL and red-black
-trees follow (see [docs/plan.md](docs/plan.md)).
+**Status:** milestone 7. All seven structures (stack, queue, singly linked list, ordinary
+binary tree, binary search tree, AVL tree and red-black tree) run in C++ and are taught
+in one workspace: play, pause, step and scrub through every operation with its
+pseudocode line, node properties and operation counters beside it; pan and zoom; batch,
+seeded random and preset examples (AVL rotations, red-black fix-up cases); keyboard
+shortcuts. Every operation can be undone and redone, and each structure can be exported
+to a JSON file and imported again, checked in C++ first (see [docs/plan.md](docs/plan.md)).
 
 ![The stack after push 10, push 20, pop](docs/screenshots/stack-after-push10-push20-pop.png)
 
@@ -71,7 +75,8 @@ npm install
 | Command | What it does | Output |
 | --- | --- | --- |
 | `npm run test:cpp` | Native CMake build and the C++ tests (doctest) | `build/native/` |
-| `npm run test:cpp:asan` | The same tests under AddressSanitizer + UBSan (about 3 minutes) | `build/asan/` |
+| `npm run test:cpp:asan` | The same tests under AddressSanitizer + UBSan, built with `-O1` (about 25 minutes) | `build/asan/` |
+| `npm run test:e2e` | Production build, the native command runner, then the Playwright suite (`web/e2e/`) against `npm run preview` in Playwright's bundled Chromium (about 5 minutes) | `test-results/` |
 | `npm run build:wasm` | Compiles the engine with Emscripten and copies it next to the web sources | `build/wasm/`, `web/src/generated/` |
 | `npm run dev` | `build:wasm`, then the Vite dev server at http://localhost:5173/ | — |
 | `npm run build` | `build:wasm`, a TypeScript check, then the production build | `dist/` |

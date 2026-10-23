@@ -192,6 +192,7 @@ Snapshot Queue::snapshot() const {
     Snapshot copy;
     copy.structure = StructureKind::Queue;
     copy.size = pool_.size();
+    copy.nextId = pool_.nextId();
     copy.front = (front_ != nullptr) ? front_->id : kNoNode;
     copy.rear = (rear_ != nullptr) ? rear_->id : kNoNode;
     for (const std::unique_ptr<Node>& node : pool_.nodes()) {
@@ -199,6 +200,20 @@ Snapshot Queue::snapshot() const {
         copy.nodes.push_back(NodeView{node->id, node->value, next});
     }
     return copy;
+}
+
+// restore(snapshot): create every node with its ID and value, then set the
+// links. pool_.find(kNoNode) is nullptr, which is how NIL is stored here.
+void Queue::restore(const Snapshot& snapshot) {
+    pool_.reset(snapshot.nextId);
+    for (const NodeView& view : snapshot.nodes) {
+        pool_.createWithId(view.id, view.value);
+    }
+    for (const NodeView& view : snapshot.nodes) {
+        pool_.find(view.id)->next = pool_.find(view.next);
+    }
+    front_ = pool_.find(snapshot.front);
+    rear_ = pool_.find(snapshot.rear);
 }
 
 }  // namespace dslab

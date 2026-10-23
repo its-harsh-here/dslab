@@ -38,8 +38,8 @@ export function ChainSvg({ frame, layout, viewBox, entry, exit, label, showIndic
   const exitDrop = showIndices ? 34 : 20; // room for the index labels
 
   return (
-    <svg className="structure-svg" role="img" aria-label={label} width={viewBox.width} height={viewBox.height}
-      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
+    <svg className="structure-svg" role="group" aria-label={label} width="100%" height="100%"
+      preserveAspectRatio="xMidYMid meet" viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
       <ArrowDefs arrows={arrows} />
 
       {snapshot.nodes.map((node) => {

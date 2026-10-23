@@ -176,12 +176,26 @@ Snapshot Stack::snapshot() const {
     Snapshot copy;
     copy.structure = StructureKind::Stack;
     copy.size = pool_.size();
+    copy.nextId = pool_.nextId();
     copy.top = (top_ != nullptr) ? top_->id : kNoNode;
     for (const std::unique_ptr<Node>& node : pool_.nodes()) {
         const NodeId next = (node->next != nullptr) ? node->next->id : kNoNode;
         copy.nodes.push_back(NodeView{node->id, node->value, next});
     }
     return copy;
+}
+
+// restore(snapshot): create every node with its ID and value, then set the
+// links. pool_.find(kNoNode) is nullptr, which is how NIL is stored here.
+void Stack::restore(const Snapshot& snapshot) {
+    pool_.reset(snapshot.nextId);
+    for (const NodeView& view : snapshot.nodes) {
+        pool_.createWithId(view.id, view.value);
+    }
+    for (const NodeView& view : snapshot.nodes) {
+        pool_.find(view.id)->next = pool_.find(view.next);
+    }
+    top_ = pool_.find(snapshot.top);
 }
 
 }  // namespace dslab

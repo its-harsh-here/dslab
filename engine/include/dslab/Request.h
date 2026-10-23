@@ -2,13 +2,21 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
+#include "dslab/Snapshot.h"
 #include "dslab/Types.h"
 
 namespace dslab {
 
 enum class Operation {
-    Snapshot,  // shared by every structure
+    // shared by every structure
+    Snapshot,
+    Catalog,  // the pseudocode listings
+    Undo,
+    Redo,
+    Export,
+    Import,
     // stack
     Push,
     Pop,
@@ -38,7 +46,9 @@ enum class Operation {
     Clear
 };
 
-// Operations that change the structure get an undo-history entry when they succeed.
+// Operations that change the structure get an undo-history entry when they
+// succeed. Undo and redo change it too, but move entries between the history
+// lists instead of adding one, so they are not listed here.
 inline bool isMutating(Operation operation) {
     switch (operation) {
         case Operation::Push:
@@ -54,6 +64,7 @@ inline bool isMutating(Operation operation) {
         case Operation::Insert:
         case Operation::Delete:
         case Operation::Clear:
+        case Operation::Import:
             return true;
         default:
             return false;
@@ -70,6 +81,10 @@ struct Request {
     NodeId nodeId = kNoNode;
     NodeId parentId = kNoNode;
     Side side = Side::Left;
+    // import: the document's snapshot as the JSON layer decoded it (rules 1
+    // and 2 of contract 5.7), or why it could not be decoded ("" if it could).
+    Snapshot importSnapshot;
+    std::string importProblem;
 };
 
 }  // namespace dslab

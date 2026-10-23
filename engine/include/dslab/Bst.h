@@ -45,6 +45,11 @@ public:
     // A copy of every node, in ascending ID order.
     Snapshot snapshot() const;
 
+    // Replaces the whole structure with 'snapshot' (undo, redo, import): the
+    // same IDs, values, links and ID counter. Only called with a snapshot that
+    // passed validateSnapshot(), so every link names a listed node. No frames.
+    void restore(const Snapshot& snapshot);
+
     int size() const { return pool_.size(); }
 
 private:

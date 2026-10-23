@@ -13,7 +13,8 @@ constexpr int kMaxNodes = 200;
 // operation needs 2n + 2 = 402 frames, so the cap is never reached.
 constexpr int kMaxFramesPerOperation = 512;
 
-// At most this many undo (and, later, redo) snapshots per structure.
+// At most this many history snapshots per structure, undo and redo together.
+// 7 structures x 50 x 200 nodes is at most 70,000 node copies (a few MB).
 constexpr int kMaxHistory = 50;
 
 // Requests longer than this are rejected with BAD_REQUEST.

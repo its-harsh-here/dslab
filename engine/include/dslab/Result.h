@@ -27,6 +27,9 @@ enum class ErrorCode {
     ChildExists,
     DuplicateValue,
     ValueNotFound,
+    NothingToUndo,
+    NothingToRedo,
+    ImportInvalid,
     // Should never happen.
     InternalError
 };

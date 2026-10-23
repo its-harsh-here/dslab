@@ -1,8 +1,9 @@
-// The four traversals, shared by the binary tree and the BST. They only read
-// the tree, so sharing them is safe (decision D11 in operation-contract.md);
-// every algorithm that changes a tree stays in that tree's own class.
+// The four traversals, shared by every tree. They only read the tree, so
+// sharing them is safe (decision D11 in operation-contract.md); every
+// algorithm that changes a tree stays in that tree's own class.
 //
 // 'Tree' must have snapshot(). 'Node' must have id, value, left and right.
+// NIL is nullptr, except in the red-black tree, which passes its sentinel.
 //
 //   preorder(node):  if node = NIL: return; visit(node); preorder(node.left); preorder(node.right)
 //   inorder(node):   if node = NIL: return; inorder(node.left); visit(node); inorder(node.right)
@@ -38,9 +39,10 @@ template <typename Tree, typename Node>
 class TreeTraversal {
 public:
     // 'structure' is the step-ID prefix ("binaryTree"); 'treeName' is used in
-    // sentences ("binary tree").
-    TreeTraversal(const Tree& tree, std::string structure, std::string treeName, Trace& trace)
-        : tree_(tree), structure_(std::move(structure)), treeName_(std::move(treeName)), trace_(trace) {}
+    // sentences ("binary tree"); 'nil' is what the tree's links use for NIL.
+    TreeTraversal(const Tree& tree, std::string structure, std::string treeName, Trace& trace,
+                  const Node* nil = nullptr)
+        : tree_(tree), structure_(std::move(structure)), treeName_(std::move(treeName)), trace_(trace), nil_(nil) {}
 
     TraversalResult run(TraversalOrder order, const Node* root, int size) {
         order_ = order;
@@ -48,9 +50,9 @@ public:
         trace_.frame(tree_.snapshot(), Event::Begin, step("enter"),
                      title + " traversal of " +
                          (size == 0 ? "an empty " + treeName_
-                                    : "a " + treeName_ + " that holds " + nodeCount(size)) + ".");
+                                    : withArticle(treeName_) + " that holds " + nodeCount(size)) + ".");
 
-        if (root == nullptr) {
+        if (root == nil_) {
             trace_.frame(tree_.snapshot(), Event::Done, step("done"),
                          "The " + treeName_ + " is empty, so there is nothing to visit.");
             return result_;
@@ -74,12 +76,12 @@ private:
     // The pre-, in- and post-order recursion; only the position of visit() differs.
     void depthFirst(const Node* node) {
         if (order_ == TraversalOrder::Pre) visit(node);
-        if (node->left != nullptr) {
+        if (node->left != nil_) {
             arrive(node->left, node);
             depthFirst(node->left);
         }
         if (order_ == TraversalOrder::In) visit(node);
-        if (node->right != nullptr) {
+        if (node->right != nil_) {
             arrive(node->right, node);
             depthFirst(node->right);
         }
@@ -100,12 +102,12 @@ private:
 
             Highlight highlight{{node->id}, {}};
             std::string added;
-            if (node->left != nullptr) {
+            if (node->left != nil_) {
                 queue.push_back(node->left);
                 highlight.edges.push_back(Edge{node->id, node->left->id});
                 added = "its left child " + text(node->left->value);
             }
-            if (node->right != nullptr) {
+            if (node->right != nil_) {
                 queue.push_back(node->right);
                 highlight.edges.push_back(Edge{node->id, node->right->id});
                 added += (added.empty() ? "its right child " : " and its right child ") + text(node->right->value);
@@ -122,7 +124,7 @@ private:
         }
     }
 
-    // The traversal arrives at 'node' (from 'parent', or at the root).
+    // The traversal arrives at 'node' (from 'parent', or at the root when 'parent' is nullptr).
     void arrive(const Node* node, const Node* parent) {
         trace_.counters.nodesVisited++;
         if (parent == nullptr) {
@@ -166,6 +168,12 @@ private:
 
     static std::string text(Value value) { return std::to_string(value); }
 
+    // "a binary tree", "a BST", "an AVL tree": "an" exactly when the name starts with a vowel letter.
+    static std::string withArticle(const std::string& name) {
+        const bool vowel = !name.empty() && std::string("AEIOUaeiou").find(name[0]) != std::string::npos;
+        return (vowel ? "an " : "a ") + name;
+    }
+
     static std::string nodeCount(int count) {
         return std::to_string(count) + (count == 1 ? " node" : " nodes");
     }
@@ -174,6 +182,7 @@ private:
     std::string structure_;
     std::string treeName_;
     Trace& trace_;
+    const Node* nil_;  // non-owning: the tree's NIL (nullptr, or the red-black sentinel)
     TraversalOrder order_ = TraversalOrder::Pre;
     TraversalResult result_;
 };

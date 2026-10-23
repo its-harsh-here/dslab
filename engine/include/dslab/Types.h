@@ -13,8 +13,8 @@ using Value = std::int32_t;
 using NodeId = std::int32_t;
 constexpr NodeId kNoNode = 0;
 
-// The structures this engine implements. AVL and red-black trees come later.
-enum class StructureKind { Stack, Queue, List, BinaryTree, Bst };
+// The structures this engine implements.
+enum class StructureKind { Stack, Queue, List, BinaryTree, Bst, Avl, RedBlack };
 
 // Stack, queue and list nodes link with "next"; tree nodes with left/right/parent.
 inline bool isLinear(StructureKind structure) {
@@ -24,6 +24,9 @@ inline bool isLinear(StructureKind structure) {
 
 // Which child link of a tree node.
 enum class Side { Left, Right };
+
+// A red-black node's color. Nodes of every other structure have no color (None).
+enum class Color { None, Black, Red };
 
 // What one frame shows (operation-contract.md, section 6.2).
 // Only the events used so far exist.
@@ -39,6 +42,13 @@ enum class Event {
     Link,      // a link or entry pointer was set to a node
     Unlink,    // a link or entry pointer was set to NIL
     Remove,    // a node was freed
+    Update,    // a stored field other than a link changed (AVL height)
+    Imbalance, // AVL: a balance of +2 or -2 was found, or its case was chosen
+    FixupCase, // red-black: a fix-up case (insert 1-3, delete 1-4) was recognised
+    Rotate,    // a left or right rotation finished
+    Recolor,   // red-black: one node's color was assigned
+    Balanced,  // a fix-up finished; the tree's invariants hold again
+    Restore,   // undo, redo or import replaced the whole structure
     Reject,    // the operation was rejected (last frame)
     Done       // the operation succeeded (last frame)
 };

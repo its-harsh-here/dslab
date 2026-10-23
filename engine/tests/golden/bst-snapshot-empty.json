@@ -36,6 +36,13 @@
         "pointers": {},
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 0,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "bst",
           "size": 0,
@@ -55,6 +62,13 @@
         "pointers": {},
         "output": [],
         "pending": [],
+        "counters": {
+          "comparisons": 0,
+          "nodesVisited": 0,
+          "linksChanged": 0,
+          "rotations": 0,
+          "recolors": 0
+        },
         "snapshot": {
           "structure": "bst",
           "size": 0,

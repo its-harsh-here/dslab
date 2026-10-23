@@ -1,0 +1,39 @@
+{
+  "format": "dslab-structure",
+  "formatVersion": 1,
+  "nextId": 4,
+  "snapshot": {
+    "structure": "avl",
+    "size": 3,
+    "root": 1,
+    "nodes": [
+      {
+        "id": 1,
+        "value": 30,
+        "left": 2,
+        "right": null,
+        "parent": null,
+        "height": 3,
+        "balance": 2
+      },
+      {
+        "id": 2,
+        "value": 20,
+        "left": 3,
+        "right": null,
+        "parent": 1,
+        "height": 2,
+        "balance": 1
+      },
+      {
+        "id": 3,
+        "value": 10,
+        "left": null,
+        "right": null,
+        "parent": 2,
+        "height": 1,
+        "balance": 0
+      }
+    ]
+  }
+}

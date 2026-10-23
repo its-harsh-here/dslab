@@ -187,21 +187,33 @@ six frames of contract 7.2.
 
 ## Milestone 4: AVL tree
 
-- [ ] `AvlTree`: recursive `insert` and `delete` (`removeMin` detaches the successor
-      node), `rebalance` with the LL, RR, LR and RL cases, `search`, traversals, `clear`,
-      `restore()` (heights and balances validated).
-- [ ] Snapshot includes `height` and the derived `balance`; catalog listings include
-      `rebalance` steps.
-- [ ] AVL invariant checker that recomputes heights from the snapshot itself.
-- [ ] Tests for each rotation case on insert **and** on delete, a delete that rotates
-      more than once, a rejected duplicate (no height or rotation frames, nothing
-      changed), and **ID survival**: every surviving value keeps its ID across every
-      rotation.
-- [ ] Oracle against `std::set` (10,000 seeded operations); after each operation,
-      height ≤ 1.44 · log2(n + 2).
-- [ ] UI: height and balance shown on each node; rotation frames highlight the pivot
-      and the edges that change.
-- [ ] End-to-end: inserting 30, 20, 10 shows an LL rotation and ends with 20 at the root.
+Design and pseudocode with step IDs: [avl.md](avl.md) (approved before any code). At the
+owner's request to reuse the BST's structure, the AVL tree uses parent pointers and a
+fix-up walk to the root instead of the recursive design first planned (contract D10).
+
+- [x] `AvlTree`: the BST's `insert` and `delete` (successor node relinked) followed by
+      `fixUp`, `rebalance` with the LL, RR, LR and RL cases, CLRS rotations, `search`
+      (path highlight), traversals, `clear`. (`restore()` moved to milestone 7.)
+- [x] Snapshot includes `parent`, `height` and the derived `balance`. Frames for each
+      comparison, insertion and removal, each height update, imbalance detection, the case
+      (named in the explanation), every rotation, and the end of rebalancing. Any
+      intermediate frame with a balance of ±2 is labelled "temporarily unbalanced".
+      (Catalog listings follow with the catalog in milestone 6.)
+- [x] AVL invariant checker that recomputes heights from the snapshot itself, checks BST
+      order, stored heights and balances, and every balance in −1..+1, plus a frame
+      check that every temporary imbalance is labelled.
+- [x] Tests: the four insert cases (LL 30,20,10 · RR 10,20,30 · LR 30,10,20 ·
+      RL 10,30,20) asserting the final shape, heights, case names, rotation steps and ID
+      survival; a delete that rebalances the root, and one that rebalances two ancestors
+      (LL at 30, then RL at 50); rejected duplicates and absent keys change nothing.
+- [x] Randomized: 2,000 seeded mixed inserts and deletes compared with `std::set`, the
+      checker after every operation, height ≤ 1.44 · log2(n + 2), and all four cases
+      exercised (LL 86, LR 76, RR 98, RL 84 times). 200 increasing inserts give height 8.
+- [x] UI: height and balance shown under each node, out-of-range nodes in red; a
+      rotation is one consistent frame, so nodes and edges move together; presets for the
+      four cases.
+- [x] Checked in the browser (Playwright MCP): each preset's imbalance frame and final
+      tree, `docs/screenshots/m4-avl-*.png`, no console errors.
 
 **Definition of done:** all four rotation cases are demonstrable from the UI, and every
 test above passes.
@@ -210,112 +222,165 @@ test above passes.
 
 ## Milestone 5: red-black tree
 
-- [ ] `RedBlackTree` (CLRS): NIL sentinel as a member, `insert` + insert fix-up
+Design first: [red-black.md](red-black.md) (the sentinel and its owner, the five
+properties, both fix-ups with their mirrors, the extra black, step IDs).
+
+- [x] `RedBlackTree` (CLRS): NIL sentinel as a member, `insert` + insert fix-up
       (cases 1–3 and mirrors), `delete` + transplant + delete fix-up (cases 1–4 and
-      mirrors), `search`, traversals, `clear`, `restore()` (colors and black-heights
-      validated).
-- [ ] Red-black invariant checker for the properties in contract 2.7, working on the
-      snapshot only.
-- [ ] Case coverage: a curated test sequence must emit every insert and delete case step
-      ID in both mirror directions. The test fails if any case step ID is never seen.
-- [ ] Oracle against `std::set` (10,000 seeded operations); after each operation,
-      height ≤ 2 · log2(n + 1). ID survival across rotations.
-- [ ] UI: red and black nodes, also marked with "R"/"B" text so color is not the only
-      signal; recolor frames highlight the nodes that changed.
-- [ ] End-to-end: inserting 10, 20, 30 shows a rotation and recolor, and the root ends
-      black.
+      mirrors), `search` (path highlight), traversals (the shared `TreeTraversal`, now
+      told what NIL is), `clear`. (`restore()` moved to milestone 7, as for the AVL tree.)
+- [x] Frames for each comparison, insertion and removal, each recolor (one frame per
+      color assignment), each rotation, and each named fix-up case (`fixupCase` event);
+      mirror cases have their own `…Mirror` step IDs (contract D24). Frames that break
+      property 2, 4 or 5 say "temporary violation: …".
+- [x] Red-black invariant checker for the properties in contract 2.7, working on the
+      snapshot only: BST order, valid parent/child links, every node reachable, red or
+      black, black NIL, black root, no red-red, equal black heights. For every frame it
+      requires the "temporary violation" label exactly when a property is broken.
+      Checked against three deliberately broken engines (a missing recolor, no labels,
+      the BST's transplant): each one fails the tests.
+- [x] Case coverage: one scenario per case and side (14) asserts the exact case sequence
+      and the final shape and colors; a coverage test fails if any of the 14 case step
+      IDs is never seen.
+- [x] Delete tests: the root (leaf, one child, two children), a red leaf (no fix-up), a
+      black leaf (fix-up), two-child deletes (deeper successor; successor with a NIL x
+      found through `nil.parent`), and every key until the tree is empty.
+- [x] Oracle against `std::set`: 5,000 seeded operations (the milestone request; this
+      list first said 10,000), membership and in-order output after every one, the engine's
+      own in-order traversal every 100; height ≤ 2 · log2(n + 1). All 14 case IDs occur.
+      ID survival across rotations; 200 increasing inserts; 11-character values keep
+      every explanation within 140 characters.
+- [x] UI: red and black nodes, also marked with an "R"/"B" badge (and in the accessible
+      name) so color is not the only signal; highlighting changes only the outline; a
+      "Show NIL leaves" toggle; seven presets, one per fix-up case.
+- [x] Checked in the browser (Playwright MCP): every preset's frames, a recolor and a
+      rotation frame per preset in `docs/screenshots/m5-rb-*.png`; typing 10, 20, 30
+      shows a recolor and a rotation and the root ends black; no console errors. (The
+      automated end-to-end suite, `npm run test:e2e`, is milestone 6.)
 
 **Definition of done:** every fix-up case can be reached from the UI and is covered by a
 test; all checks pass.
 
 ---
 
-## Milestone 6: playback and layout
+## Milestone 6: the teaching UI (playback, layout, panels)
 
-- [ ] Player: play / pause, step forward and back, first / last, scrub slider, speed
-      0.5× to 4×, "skip animation", and keyboard shortcuts for each.
-- [ ] `Catalog` and the `catalog` operation, the pseudocode panel that highlights
-      `stepId`, and the metrics panel (deferred from milestone 2).
-- [ ] `npm run test:e2e`: `@playwright/test`, `playwright.config.ts` (bundled Chromium),
-      the `window.__dslab.handle` hook and the Wasm-equals-native golden check (deferred
-      from milestone 2), plus the stack checks done by hand in milestone 2.
-- [ ] Layout implements the full rule of architecture.md 3.2: reachable nodes in normal
-      places, unreachable nodes keep their previous position, new nodes in the staging
-      spot, positions cached per response and continued from the previous response.
-- [ ] Rendering: CSS transform transitions keyed by node ID (rotations and transplants
-      slide), edge highlights, pointer labels (`curr`, `parent`, `x`…), entry labels, and
-      no transitions under `prefers-reduced-motion`.
-- [ ] Zoom-to-fit so that a 200-node tree fits the view; horizontal scrolling for long
-      lists.
-- [ ] Metrics panel separates algorithm counters and catalog Big-O from trace cost
-      (`frames`, `snapshotNodes`).
-- [ ] Explanation bar in an `aria-live` region; every control reachable by keyboard.
-- [ ] End-to-end: stepping changes the explanation and pseudocode line together; scrubbing
-      to the end equals the final snapshot; a rotated node keeps the same SVG element
-      (checked through a `data-node-id` attribute); with reduced motion on, nothing animates.
-- [ ] Measured and recorded in the hand-over: time from click to first frame, and
-      frame-to-frame render time, for the worst response (a 200-node red-black
-      traversal).
+Rewritten to match the milestone request. No engine algorithm changed.
 
-**Definition of done:** the list reverse, BST delete with a deeper successor, an AVL LR
-rotation and a red-black delete fix-up all play smoothly, with nodes keeping their identity
-on screen; all checks pass.
+- [x] Engine data the UI needed: the `Catalog` (pseudocode, step IDs, Big-O for every
+      operation, helper procedures included) and the `catalog` operation (contract 2.8,
+      5.6); `counters` in every frame (contract 6.1). Every step ID of every frame of every
+      test is now checked against its listing (contract 6.6 item 4), and a deliberately
+      wrong listing line makes the tests fail.
+- [x] Layout: structure selector on the left, operations above, the drawing in the
+      centre, explanation / pseudocode / node properties / cost / text view on the right,
+      playback and operation history below; one column below 900 px.
+- [x] Player (`web/src/playback/player.ts`), one per structure, outside React: play,
+      pause, step forward and back, replay, speed 0.5×–4×, timeline scrubber, jump to
+      result. The authoritative state (`latest`) is kept apart from the frame on screen;
+      operations wait while a frame other than the result is shown; batches are sent one
+      at a time, in order; reset and switching structure cancel playback (one
+      requestAnimationFrame loop per structure, one keyboard listener).
+- [x] Pseudocode panel highlighting `frame.stepId`; node properties by ID; traversal output
+      building up; counters "so far" and "whole operation" beside the catalog's Big-O and
+      the tracing cost, labelled separately (rule 11).
+- [x] Pan (drag), zoom (wheel, buttons, keys) and fit; the automatic view keeps labels
+      readable (scale 0.7–1.5) and centres on where the operation acts when everything
+      would be too small.
+- [x] Examples: batch insert from a comma-separated list, seeded random examples, named
+      presets (AVL rotations, red-black fix-up cases, two BST cases).
+- [x] Keyboard shortcuts, accessible names, one visible focus style, reduced motion, and a
+      text view of the frame on screen.
+- [x] Checked with the Playwright MCP browser: every structure mid-animation at 1440×900
+      and 390×844 (`docs/screenshots/m6-*.png`), a keyboard-only run, no console errors;
+      `npm run test:cpp` and `npm run build` pass.
+
+Moved to milestone 8: the automated `npm run test:e2e` suite (`@playwright/test`,
+`playwright.config.ts`, the `window.__dslab.handle` hook and the Wasm-equals-native golden
+check) and the click-to-first-frame / frame-to-frame timing measurements.
+
+**Definition of done:** each structure can be played, paused, stepped and scrubbed with
+pseudocode, properties and counters in step; screenshots at both sizes, a keyboard-only
+run and a clean console are recorded; all checks pass.
 
 ---
 
 ## Milestone 7: undo/redo and import/export
 
-- [ ] Engine operations `undo`, `redo`, `export`, `import` (contract 2.8 and 5.7), with
-      `restore` frames.
-- [ ] `restore()` for every structure, with its tests (the stack's was deferred from
-      milestone 2), and the `INTERNAL_ERROR` rollback in `Engine::apply`.
-- [ ] Tests: the 50-entry bound per list; redo cleared by a new mutation; undo/redo never
-      lower the ID counter; one rejection test per import rule (5.7, rules 1–9) for every
-      structure it applies to; importing a file of another structure is rejected;
-      export → import → export gives identical text for all seven structures.
-- [ ] UI: Undo / Redo buttons enabled from `history` counts (Ctrl+Z / Ctrl+Y); Export
-      downloads `dslab-<structure>.json`; Import opens a file picker and sends the text
-      unread; errors appear in the banner.
-- [ ] End-to-end: build a tree, export, clear, import → the same picture and IDs; undo
-      after import brings back the cleared state; a broken file shows `IMPORT_INVALID`.
+Rewritten to match the milestone request. Design: architecture.md 2.9.
 
-**Definition of done:** history and files work on all seven tabs, and all checks pass.
+- [x] Engine operations `undo`, `redo`, `export`, `import` (contract 2.8 and 5.7), with
+      `restore` frames that name the operation undone or redone.
+- [x] Snapshot-based history (decision D23): at most 50 entries per structure, undo and
+      redo together, oldest dropped first; a new change clears the redo list. Each entry
+      holds the ID counter, which undo, redo and import restore exactly (decision D30,
+      replacing "never lower the counter").
+- [x] `restore()` for all seven structures; `validateSnapshot()` for rules 3–10 and the
+      JSON layer for rules 1–2, both before anything changes, so an invalid file is
+      rejected atomically.
+- [x] Tests: undo/redo round trips for every structure (every field and the ID counter);
+      the redo branch cleared; the 50-entry bound; one or more malformed-import tests per
+      rule (1–10) with the message checked and state, counter and history unchanged;
+      export → import → export byte for byte for all seven structures; an import undone
+      and redone. Fixtures in `engine/tests/fixtures`: one valid and four to six invalid
+      files per tree type. Checked against two deliberately broken engines.
+- [x] UI: Undo / Redo enabled from the `history` counts (Ctrl+Z / Ctrl+Y); Export saves
+      `dslab-<structure>.json`; Import opens a file picker and sends the text unread;
+      errors appear in the explanation, the result line and the history log.
+- [x] Checked with the Playwright MCP browser: an AVL tree built, undone three times,
+      redone twice, exported, reset and imported (the export afterwards is byte-identical);
+      a broken file shows `IMPORT_INVALID` and leaves the tree and its export unchanged
+      (`docs/screenshots/m7-*.png`).
+
+Moved to milestone 8: the `INTERNAL_ERROR` rollback in `Engine::apply` (it can now use
+`restore()`).
+
+**Definition of done:** history and files work on all seven structures, and all checks
+pass.
 
 ---
 
-## Milestone 8: audit
+## Milestone 8: audit of algorithm and UI correctness
 
-Goal: prove each non-negotiable rule with evidence, fix what fails, and record it in
-`docs/audit.md`.
+Rewritten to match the milestone request.
 
-- [ ] Rule 1: no `std::stack`, `std::queue`, `std::list`, `std::set`, `std::map`,
-      `std::forward_list`, `std::deque` or `std::priority_queue` in `engine/include`,
-      `engine/src` or `engine/bindings` (search output pasted); no algorithm logic in
-      `web/src` beyond layout (reviewed file by file).
-- [ ] Rule 2: TypeScript snapshot types are `readonly`; no code path sends a snapshot back
-      except export text.
-- [ ] Rule 3: ID-survival tests exist for every rotation, transplant and relink.
-- [ ] Rule 4: no `new`/`delete` outside `NodePool`; every raw-pointer field and local
-      carries a non-owning comment (search output pasted).
-- [ ] Rules 5–7: trace-contract tests cover every operation of every structure (list the
-      operations against the tests).
-- [ ] Rule 8: a rejection test exists for every error code on every structure that can
-      raise it.
-- [ ] Rule 9: every bound in contract section 8 has a test; the largest response size is
-      measured and recorded.
-- [ ] Rule 10 / viva readiness: functions short enough to explain (aim ≤ 40 lines), a
-      header comment on every engine file, no template code beyond `NodePool` and
-      `TreeTraversal`; the owner can walk through each structure file line by line.
-- [ ] Rule 11: test count never went down (compare with the git history).
-- [ ] Rule 12: catalog Big-O matches contract section 2; counters checked by tests on
-      known cases (for example a degenerate BST insert uses n comparisons).
-- [ ] Zero compiler warnings natively and with Emscripten; ASan/UBSan clean; Wasm and JS
-      bundle sizes recorded.
-- [ ] Accessibility pass: keyboard-only use, `aria-live` explanations, color never the
-      only signal.
+- [x] All native tests run (`npm run test:cpp`).
+- [x] `npm run test:cpp:asan` made practical and run: the sanitizer preset now builds
+      with `-O1` (architecture.md section 4); every check stays on, including
+      stack-use-after-return.
+- [x] Seeded random sequences with standard-library oracles for every structure (queue,
+      list, binary tree and BST added in `test_random.cpp`), with the invariant checkers
+      after every operation (parent pointers, reachability, heights, colors, ordering);
+      `test::run()` now also checks that each response's snapshot is the engine's real
+      state; stored frames never alias live nodes; ID exhaustion on every structure;
+      repeated create/fill/reset/import/destroy across all structures (`test_audit.cpp`).
+- [x] Native versus Wasm: the same 1,298 command fixtures through `dslab_cli` and the
+      Wasm engine of the production build, normalized and compared; invalid input never
+      changes state; 300 Wasm engines created and destroyed.
+- [x] `npm run test:e2e` with `@playwright/test` 1.64.1 against `npm run preview`
+      (bundled Chromium): every step on screen matches its frame for all seven
+      structures; pause/resume, rapid clicking, scrubbing, batch insert, reset, undo/redo,
+      invalid import, structure switching, reduced motion, pan/zoom, the phone layout.
+      Any console error or failed `.wasm` request fails a test.
+- [x] Bugs found are fixed and covered by tests (the table in the milestone report).
 
-**Definition of done:** `docs/audit.md` lists every check with its evidence and every
-fix made; no open findings except ones the owner explicitly accepts.
+Still open, not part of this request:
+
+- [ ] Moved here from milestone 7: the `INTERNAL_ERROR` rollback in `Engine::apply`
+      (restore the pre-operation snapshot after an unexpected exception), with a test.
+- [ ] Measured click-to-first-frame and frame-to-frame times for the worst response
+      (a 200-node red-black traversal).
+- [ ] The rule-by-rule evidence of the original audit plan, in `docs/audit.md`: rule 1
+      (no standard containers in the engine's structures; no algorithm in `web/src`),
+      rule 2 (readonly snapshot types), rule 3 (ID survival for every relink), rule 4 (no
+      `new`/`delete` outside `NodePool`; every non-owning pointer commented), rules 5–8
+      (trace and rejection coverage per operation and error code), rule 9 (every bound
+      has a test; largest response measured), rule 10 (viva readiness), rule 11 (test
+      count never went down), rule 12 (catalog Big-O and counters), zero warnings in the
+      Emscripten build, bundle sizes, an accessibility pass.
+
+**Definition of done:** the outputs of `npm run test:cpp`, `npm run test:cpp:asan` and
+`npm run test:e2e`, and a table of bugs found, root causes, fixes and covering tests.
 
 ---
 

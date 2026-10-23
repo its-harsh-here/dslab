@@ -53,14 +53,18 @@ export function nodeClasses(base: string, state: NodeState): string {
   return classes.join(' ');
 }
 
-/** Props that make a node clickable and keyboard-selectable by its stable ID. */
-export function selectableProps(id: NodeId, value: number, selected: boolean, onSelect?: (id: NodeId) => void) {
+/**
+ * Props that make a node clickable and keyboard-selectable by its stable ID.
+ * `detail` is added to the accessible name (for example "red").
+ */
+export function selectableProps(id: NodeId, value: number, selected: boolean, onSelect?: (id: NodeId) => void,
+  detail?: string) {
   if (!onSelect) return {};
   return {
     role: 'button',
     tabIndex: 0,
     'aria-pressed': selected,
-    'aria-label': `Node #${id} holding ${value}`,
+    'aria-label': `Node #${id} holding ${value}${detail ? `, ${detail}` : ''}`,
     onClick: () => onSelect(id),
     onKeyDown: (event: KeyboardEvent) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -89,7 +93,8 @@ export function BoxNode({ id, value, at, width, height, onSelect, ...state }: Bo
       transform={`translate(${at.x} ${at.y})`}
       {...selectableProps(id, value, state.selected ?? false, onSelect)}
     >
-      <rect width={width} height={height} rx={6} />
+      {state.selected && <rect className="selection-ring" x={-5} y={-5} width={width + 10} height={height + 10} rx={8} />}
+      <rect width={width} height={height} rx={4} />
       <text className="node-id" x={8} y={14}>#{id}</text>
       <text className="node-value" x={width / 2} y={height / 2 + 6} textAnchor="middle">
         {value}

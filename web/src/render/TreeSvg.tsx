@@ -1,6 +1,9 @@
-// Draws one moment of a binary tree or BST animation. Child links are labelled
-// L and R; parent pointers are stored by C++ but not drawn (they mirror the
-// child links).
+// Draws one moment of a binary tree, BST, AVL or red-black animation. Child
+// links are labelled L and R; parent pointers are stored by C++ but not drawn
+// (they mirror the child links). AVL nodes also show their height and balance;
+// a balance outside -1..+1 (a temporary imbalance) is drawn in red. Red-black
+// nodes are filled with their color and carry an R or B badge, so the color
+// never depends on seeing red; `showNil` also draws the black NIL leaves.
 import { edgeId, type Frame, type NodeId, type TreeSnapshot } from '../engine/protocol';
 import type { Layout, Point, ViewBox } from '../layout/layout';
 import { TREE_RADIUS as R, treeReachable } from '../layout/tree';
@@ -13,9 +16,15 @@ interface Props {
   label: string;
   selectedId?: NodeId | null;
   onSelect?: (id: NodeId) => void;
+  /** Red-black: draw a NIL leaf for every missing child of a node in the tree. */
+  showNil?: boolean;
 }
 
-export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect }: Props) {
+// A NIL leaf sits this far left or right of its parent's centre, and this far below it.
+const NIL_DX = 26;
+const NIL_TOP = 42;
+
+export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, showNil = false }: Props) {
   const arrows = useArrows();
   const { snapshot, highlight, pointers } = frame;
   const reachable = treeReachable(snapshot);
@@ -24,14 +33,20 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect }:
   const root = layout.markers.get('ROOT') ?? { x: 0, y: 0 };
 
   const links: { from: NodeId; to: NodeId; side: 'L' | 'R' }[] = [];
+  // The NIL leaves: missing children of nodes in the tree (detached nodes have none).
+  const nilLeaves: { parent: NodeId; side: 'L' | 'R' }[] = [];
   for (const node of snapshot.nodes) {
     if (node.left !== null) links.push({ from: node.id, to: node.left, side: 'L' });
     if (node.right !== null) links.push({ from: node.id, to: node.right, side: 'R' });
+    if (showNil && reachable.has(node.id)) {
+      if (node.left === null) nilLeaves.push({ parent: node.id, side: 'L' });
+      if (node.right === null) nilLeaves.push({ parent: node.id, side: 'R' });
+    }
   }
 
   return (
-    <svg className="structure-svg" role="img" aria-label={label} width={viewBox.width} height={viewBox.height}
-      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
+    <svg className="structure-svg" role="group" aria-label={label} width="100%" height="100%"
+      preserveAspectRatio="xMidYMid meet" viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
       <ArrowDefs arrows={arrows} />
 
       {links.map(({ from, to, side }) => {
@@ -53,17 +68,47 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect }:
         );
       })}
 
+      {nilLeaves.map(({ parent, side }) => {
+        const at = layout.nodes.get(parent);
+        if (!at) return null;
+        const dx = side === 'L' ? -NIL_DX : NIL_DX;
+        const length = Math.hypot(dx, NIL_TOP);
+        return (
+          <g key={`nil-${parent}-${side}`} className="nil-leaf" data-nil-of={parent} data-side={side}>
+            <line x1={at.x + (dx / length) * R} y1={at.y + (NIL_TOP / length) * R} x2={at.x + dx} y2={at.y + NIL_TOP} />
+            <rect x={at.x + dx - 12} y={at.y + NIL_TOP} width={24} height={16} rx={2} />
+            <text x={at.x + dx} y={at.y + NIL_TOP + 12} textAnchor="middle">NIL</text>
+          </g>
+        );
+      })}
+
       {snapshot.nodes.map((node) => {
         const at = layout.nodes.get(node.id);
         if (!at) return null;
         const selected = selectedId === node.id;
+        const unbalanced = node.balance !== undefined && Math.abs(node.balance) > 1;
+        let classes = nodeClasses('node', { highlighted: hotNodes.has(node.id), detached: !reachable.has(node.id), selected });
+        if (unbalanced) classes += ' unbalanced';
+        if (node.color) classes += node.color === 'red' ? ' rb-red' : ' rb-black';
         return (
-          <g key={node.id} data-node-id={node.id} transform={`translate(${at.x} ${at.y})`}
-            className={nodeClasses('node', { highlighted: hotNodes.has(node.id), detached: !reachable.has(node.id), selected })}
-            {...selectableProps(node.id, node.value, selected, onSelect)}>
-            <circle r={R} />
+          <g key={node.id} data-node-id={node.id} data-color={node.color} transform={`translate(${at.x} ${at.y})`}
+            className={classes}
+            {...selectableProps(node.id, node.value, selected, onSelect, node.color)}>
+            {selected && <circle className="selection-ring" r={R + 5} />}
+            <circle className="node-body" r={R} />
             <text className="node-value" y={6} textAnchor="middle">{node.value}</text>
             <text className="node-id" y={R + 13} textAnchor="middle">#{node.id}</text>
+            {node.color && (
+              <g className="rb-badge" transform={`translate(${-R - 10} 0)`} aria-hidden="true">
+                <circle r={8} />
+                <text y={3.5} textAnchor="middle">{node.color === 'red' ? 'R' : 'B'}</text>
+              </g>
+            )}
+            {node.height !== undefined && node.balance !== undefined && (
+              <text className={unbalanced ? 'avl-label unbalanced' : 'avl-label'} data-avl-label y={R + 26} textAnchor="middle">
+                h{node.height} · bf {node.balance > 0 ? `+${node.balance}` : node.balance}
+              </text>
+            )}
           </g>
         );
       })}
@@ -71,11 +116,13 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect }:
       <g className="marker" data-marker="ROOT">
         <text x={root.x} y={root.y - 52} textAnchor="middle">ROOT</text>
         <line x1={root.x} y1={root.y - 46} x2={root.x} y2={root.y - R - 4} markerEnd={arrows.normal} />
-        {snapshot.root === null && <text className="null-text" x={root.x} y={root.y + 4} textAnchor="middle">NULL</text>}
+        {snapshot.root === null && (
+          <text className="null-text" x={root.x} y={root.y + 4} textAnchor="middle">{snapshot.nilColor ? 'NIL' : 'NULL'}</text>
+        )}
       </g>
 
       <PointerLabels pointers={pointers} nodes={layout.nodes}
-        spot={(at, line) => ({ x: at.x + R + 6, y: at.y - R + 6 + line * 13 })} />
+        spot={(at, line) => ({ x: at.x + R + 6, y: at.y + 4 + line * 13 })} />
     </svg>
   );
 }

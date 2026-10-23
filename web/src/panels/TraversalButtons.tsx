@@ -1,14 +1,16 @@
-import type { Args } from '../engine/protocol';
+import type { Snapshot } from '../engine/protocol';
+import type { Player } from '../playback/player';
+import { OpButton } from '../ui/OperationBar';
 
-/** The four traversal buttons, shared by the binary tree and the BST. */
-export function TraversalButtons({ send }: { send: (operation: string, args?: Args) => void }) {
+/** The four traversal buttons, shared by every tree. */
+export function TraversalButtons<S extends Snapshot>({ player }: { player: Player<S> }) {
   return (
-    <div className="controls traversals">
-      <span className="group-label">Traverse:</span>
-      <button type="button" onClick={() => send('preorder')}>Pre-order</button>
-      <button type="button" onClick={() => send('inorder')}>In-order</button>
-      <button type="button" onClick={() => send('postorder')}>Post-order</button>
-      <button type="button" onClick={() => send('levelorder')}>Level-order</button>
+    <div className="controls" role="group" aria-label="Traversals">
+      <span className="group-label">Traverse</span>
+      <OpButton onClick={() => player.run('preorder')}>Pre-order</OpButton>
+      <OpButton onClick={() => player.run('inorder')}>In-order</OpButton>
+      <OpButton onClick={() => player.run('postorder')}>Post-order</OpButton>
+      <OpButton onClick={() => player.run('levelorder')}>Level-order</OpButton>
     </div>
   );
 }

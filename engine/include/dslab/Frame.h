@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "dslab/Counters.h"
 #include "dslab/Snapshot.h"
 #include "dslab/Types.h"
 
@@ -37,6 +38,7 @@ struct Frame {
     std::vector<NamedPointer> pointers;
     std::vector<Value> output;    // traversals only (later milestones)
     std::vector<NodeId> pending;  // level-order traversal only (later milestones)
+    Counters counters;            // the algorithm's work up to and including this step
     Snapshot snapshot;            // the whole structure right after this step
 };
 

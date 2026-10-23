@@ -418,6 +418,7 @@ Snapshot Bst::snapshot() const {
     Snapshot copy;
     copy.structure = StructureKind::Bst;
     copy.size = pool_.size();
+    copy.nextId = pool_.nextId();
     copy.root = (root_ != nullptr) ? root_->id : kNoNode;
     for (const std::unique_ptr<Node>& node : pool_.nodes()) {
         NodeView view;
@@ -429,6 +430,22 @@ Snapshot Bst::snapshot() const {
         copy.nodes.push_back(view);
     }
     return copy;
+}
+
+// restore(snapshot): create every node with its ID and value, then set the
+// links. pool_.find(kNoNode) is nullptr, which is how NIL is stored here.
+void Bst::restore(const Snapshot& snapshot) {
+    pool_.reset(snapshot.nextId);
+    for (const NodeView& view : snapshot.nodes) {
+        pool_.createWithId(view.id, view.value);
+    }
+    for (const NodeView& view : snapshot.nodes) {
+        Node* node = pool_.find(view.id);  // non-owning: the pool owns every node
+        node->left = pool_.find(view.left);
+        node->right = pool_.find(view.right);
+        node->parent = pool_.find(view.parent);
+    }
+    root_ = pool_.find(snapshot.root);
 }
 
 }  // namespace dslab

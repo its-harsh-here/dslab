@@ -20,14 +20,18 @@ endif()
 
 # The engine: plain C++17 that compiles natively and to WebAssembly.
 add_library(dslab_engine STATIC
+  engine/src/AvlTree.cpp
+  engine/src/Catalog.cpp
   engine/src/BinaryTree.cpp
   engine/src/Bst.cpp
   engine/src/Engine.cpp
   engine/src/History.cpp
   engine/src/Queue.cpp
+  engine/src/RedBlackTree.cpp
   engine/src/SinglyLinkedList.cpp
   engine/src/Stack.cpp
   engine/src/Trace.cpp
+  engine/src/Validate.cpp
   engine/src/json/Protocol.cpp)
 target_include_directories(dslab_engine PUBLIC engine/include)
 # Third-party headers are SYSTEM so their warnings do not fail our build.
@@ -54,11 +58,18 @@ else()
   enable_testing()
   add_executable(dslab_tests
     engine/tests/test_main.cpp
+    engine/tests/test_audit.cpp
+    engine/tests/test_avl.cpp
     engine/tests/test_binary_tree.cpp
+    engine/tests/test_catalog.cpp
+    engine/tests/test_history.cpp
+    engine/tests/test_import.cpp
     engine/tests/test_bst.cpp
     engine/tests/test_list.cpp
     engine/tests/test_protocol.cpp
     engine/tests/test_queue.cpp
+    engine/tests/test_random.cpp
+    engine/tests/test_red_black.cpp
     engine/tests/test_stack.cpp
     engine/tests/test_support_classes.cpp
     engine/tests/support/Checkers.cpp
@@ -68,6 +79,12 @@ else()
   target_include_directories(dslab_tests SYSTEM PRIVATE engine/third_party)
   target_compile_options(dslab_tests PRIVATE ${DSLAB_WARNINGS})
   target_compile_definitions(dslab_tests PRIVATE
-    DSLAB_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/engine/tests/golden")
+    DSLAB_GOLDEN_DIR="${CMAKE_CURRENT_SOURCE_DIR}/engine/tests/golden"
+    DSLAB_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/engine/tests/fixtures")
   add_test(NAME dslab_tests COMMAND dslab_tests)
+
+  # The native side of the native-versus-Wasm comparison (npm run test:e2e).
+  add_executable(dslab_cli engine/tools/dslab_cli.cpp)
+  target_link_libraries(dslab_cli PRIVATE dslab_engine)
+  target_compile_options(dslab_cli PRIVATE ${DSLAB_WARNINGS})
 endif()

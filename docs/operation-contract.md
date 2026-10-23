@@ -29,11 +29,13 @@ Contents:
 
 - **Values** are 32-bit signed integers, −2,147,483,648 to 2,147,483,647.
 - **Node IDs** are positive 32-bit integers. Each structure has its own counter, starting
-  at 1 and increasing by one for every node it creates. An ID is never reused within the
-  structure for the life of the page: `clear`, `undo`, `redo` and `import` never lower the
-  counter, and after a restore the counter becomes max(counter, largest restored ID + 1).
-  A node keeps its ID through every rotation, transplant and relink. ID 0 means "no node"
-  inside C++ and is written as `null` in JSON.
+  at 1 and increasing by one for every node it creates. The counter is part of the
+  structure's state: `clear` never lowers it, while `undo`, `redo` and `import` restore it
+  exactly with the rest of the state (decision D30). Within any one state, every ID is
+  unique; after an undo, the next new node can get the ID of the node the undo removed
+  (that node then exists nowhere, since the new change clears the redo list). A node keeps
+  its ID through every rotation, transplant and relink. ID 0 means "no node" inside C++
+  and is written as `null` in JSON.
 - **Capacity**: at most 200 nodes per structure.
 - **Structures** and their wire names: `stack`, `queue`, `list` (singly linked list),
   `binaryTree` (ordinary binary tree), `bst`, `avl`, `redBlack`.
@@ -340,55 +342,57 @@ In frames, `pointers` use the CLRS names: `parent`/`curr` while walking down, `z
 node being deleted, `y` for its successor. `clear` cuts `root` and frees the tree in
 post-order, like the binary tree.
 
-### 2.6 AVL tree (`root`, nodes have `height`; no parent pointers)
+### 2.6 AVL tree (`root`, nodes have `parent` and `height`)
 
 Same operations, arguments, errors and data as the BST (2.5). Algorithm: `insert`,
 `delete` and `search` are O(log n); traversals and `clear` are O(n).
 
-Conventions:
+**The full design, pseudocode and step IDs are in [avl.md](avl.md).** In short:
 
-- height(NIL) = 0, height(leaf) = 1, height(node) = 1 + max(height(left), height(right));
-- balance(node) = height(left) − height(right); the tree is valid when every balance is
-  −1, 0 or +1.
-
-Algorithm (recursive, as usually taught):
-
-- `insert(node, value)`: descend comparing values, create the node at the NIL position,
-  then on the way back up update the height and rebalance each node on the path. A
-  duplicate is detected on the way down. The recursion then returns without updating or
-  rotating anything, and no height or rotation frames are emitted.
-- `delete(node, value)`: descend to the node. With fewer than two children, its only
-  child (or NIL) takes its place. With two children, `removeMin(node.right)` detaches the
-  **in-order successor node**, rebalancing on the way back up, and that node takes the
-  deleted node's place with the deleted node's children. Then update heights and
-  rebalance on the way up to the root. Several rotations can happen in one delete.
-- `rebalance(n)`:
-  - balance +2 and balance(n.left) ≥ 0 → **LL**: rotateRight(n)
-  - balance +2 and balance(n.left) < 0 → **LR**: rotateLeft(n.left), then rotateRight(n)
-  - balance −2 and balance(n.right) ≤ 0 → **RR**: rotateLeft(n)
-  - balance −2 and balance(n.right) > 0 → **RL**: rotateRight(n.right), then rotateLeft(n)
-- `rotateLeft(x)`: y ← x.right; x.right ← y.left; y.left ← x; update height(x), then
-  height(y); return y. `rotateRight` is the mirror. Rotations relink nodes; IDs and values
-  never move between nodes.
+- height(NIL) = 0, height(leaf) = 1; balance(node) = height(left) − height(right); the
+  tree is valid when every balance is −1, 0 or +1.
+- Nodes have the BST's shape (left, right, parent) plus a stored height. Insert and delete
+  are the BST's (2.5, with the in-order successor node relinked), followed by `fixUp`:
+  walk from the lowest changed node up to the root, update each height (one frame
+  each), and rebalance any node whose balance is ±2.
+- `rebalance(n)`: balance +2 and balance(n.left) ≥ 0 → **LL** (rotateRight(n));
+  +2 and < 0 → **LR** (rotateLeft(n.left), then rotateRight(n)); −2 and
+  balance(n.right) ≤ 0 → **RR** (rotateLeft(n)); −2 and > 0 → **RL**
+  (rotateRight(n.right), then rotateLeft(n)).
+- Rotations are CLRS-style: they also relink the parent (or root), so each rotation is
+  one frame showing a consistent tree. IDs and values never move between nodes.
+- Frames between a height update that makes a node ±2 and the rotation that fixes it
+  label the temporary imbalance ("; temporarily unbalanced: 30 (+2)."). No completed
+  operation leaves a balance outside −1..+1.
 
 ### 2.7 Red-black tree (`root`, nodes have `parent` and `color`; CLRS)
 
 Same operations, arguments, errors and data as the BST (2.5). Algorithm: `insert`,
 `delete` and `search` are O(log n); traversals and `clear` are O(n).
 
+**The full design, pseudocode and step IDs are in [red-black.md](red-black.md).** In short:
+
 - Follows CLRS: one shared black **NIL sentinel** per tree, RB-INSERT (the new node is
   red) with RB-INSERT-FIXUP (cases 1–3 and their mirrors), and RB-DELETE with
   RB-TRANSPLANT and RB-DELETE-FIXUP (cases 1–4 and their mirrors). Two-child delete uses
   the in-order successor node, relinked, as in 2.5.
 - The sentinel is not a node of the structure: it has no ID, is not in the pool, is not
-  counted in `size` and never appears in a snapshot. Links to it are written as `null`.
-  When CLRS's `x` is the sentinel, the frame's `pointers` show `"x": null` and the
+  counted in `size` and never appears in a snapshot's `nodes`. Links to it are written
+  as `null`, and the snapshot reports its color as `"nilColor": "black"` (5.4). When
+  CLRS's `x` is the sentinel, the frame's `pointers` show `"x": null` and the
   explanation says "NIL".
-- Properties checked by tests: every node is red or black; the root is black; a red node
-  has no red child; every path from a node down to NIL has the same number of black
-  nodes; in-order values strictly increase.
-- Mirror cases share a step ID (for example `redBlack.insert.case1`). The explanation
-  sentence says "left" or "right".
+- Properties checked by tests: every node is red or black; the root is black; NIL is
+  black; a red node has no red child; every path from a node down to NIL has the same
+  number of black nodes; in-order values strictly increase.
+- Each fix-up case is announced by a `fixupCase` frame; every color change is its own
+  `recolor` frame and every rotation one `rotate` frame. The mirror branch of each case
+  has its own step ID ending in `Mirror` (for example `redBlack.insertFixup.case1Mirror`,
+  decision D24).
+- The delete fix-up's "extra black" is bookkeeping carried by the pointer `x`, not a
+  third color: snapshots only ever say `"red"` or `"black"`.
+- Frames between the change that breaks a property and the step that restores it label
+  the first broken property ("; temporary violation: red 10 under red 20."). No completed
+  operation leaves a property broken.
 
 ### 2.8 Shared operations (every structure)
 
@@ -401,9 +405,21 @@ Same operations, arguments, errors and data as the BST (2.5). Algorithm: `insert
 | `export` | — | no | — | `{text}`: the export document, pretty-printed | 7 |
 | `import` | `text` | yes | IMPORT_INVALID | `{nodeCount}` | 7 |
 
-- `undo` puts the current snapshot on the redo list and restores the newest undo entry.
-  `redo` is the mirror. Neither pushes an undo entry of its own. Frames: `begin`,
-  `restore`, `done`.
+- `catalog` runs no algorithm: like `snapshot`, it returns two frames
+  (`common.catalog.enter`, `common.catalog.done`) and changes nothing. The UI reads it once
+  per structure when the page loads.
+- `undo` puts the current snapshot on the redo list and restores the newest undo entry,
+  exactly: IDs, values, links, heights, colors and the ID counter. `redo` is the mirror.
+  Neither pushes an undo entry of its own. A new change after an undo clears the redo
+  list. Frames: `begin`, `restore`, `done` (step IDs `common.undo.enter`,
+  `common.undo.restore`, `common.undo.done`; `common.redo.*` likewise). Each history entry
+  carries a label naming the operation, so the frames say what is undone ("Undo insert 25
+  on the AVL tree."). With an empty list, `begin` then `reject` (`common.undo.empty`).
+- `export` changes nothing and adds no history entry. Frames: `begin`, `done`
+  (`common.export.*`). `data.text` is the export document of 5.7, written by the JSON
+  layer with 2-space indentation.
+- `import` frames: `begin`, `restore`, `done` (`common.import.*`), or `begin`, `reject`
+  (`common.import.invalid`) for an invalid file.
 - `import` replaces the whole structure with the document's snapshot after full
   validation (section 5.7). It is undoable like any mutating operation. IDs in the file
   are kept exactly.
@@ -606,8 +622,8 @@ an operation. That is what makes mid-operation frames complete.
 | `list` | `head` | `id`, `value`, `next` |
 | `binaryTree` | `root` | `id`, `value`, `left`, `right`, `parent` |
 | `bst` | `root` | `id`, `value`, `left`, `right`, `parent` |
-| `avl` | `root` | `id`, `value`, `left`, `right`, `height`, `balance` |
-| `redBlack` | `root` | `id`, `value`, `left`, `right`, `parent`, `color` (`"red"`/`"black"`) |
+| `avl` | `root` | `id`, `value`, `left`, `right`, `parent`, `height`, `balance` |
+| `redBlack` | `root`, `nilColor` (always `"black"`) | `id`, `value`, `left`, `right`, `parent`, `color` (`"red"`/`"black"`) |
 
 Key order: `structure`, `size`, the entry fields, `nodes`. Every link and entry field is
 a node ID or `null`. `size` is the number of nodes owned, which equals `nodes.length`.
@@ -663,7 +679,10 @@ emitted by an operation appears in that operation's listing.
 ```
 
 Lines that never produce a frame have `"stepId": null`. Leading spaces in `text` are the
-indentation.
+indentation. A listing also contains the helper procedures its operation calls (for
+example `transplant`, `freeSubtree`, the AVL `fixUp`, `rebalance` and rotations, and both
+sides of each red-black fix-up), and a step ID appears on at most one line of a listing,
+so the UI can highlight exactly one line.
 
 ### 5.7 Export document and import validation
 
@@ -671,17 +690,24 @@ indentation.
 {
   "format": "dslab-structure",
   "formatVersion": 1,
+  "nextId": 2,
   "snapshot": { "structure": "stack", "size": 1, "top": 1, "nodes": [ { "id": 1, "value": 10, "next": null } ] }
 }
 ```
 
-The `snapshot` is exactly the snapshot schema of 5.4. `import` (and every internal
-restore) accepts it only if all of the following hold. Otherwise it fails with
-`IMPORT_INVALID`, and the message names the first rule broken and the node ID.
+The `snapshot` is exactly the snapshot schema of 5.4; `nextId` is the structure's ID
+counter (the ID the next node will get), which response snapshots do not show. `import`
+accepts a document only if all of the following hold. Otherwise it fails with
+`IMPORT_INVALID` (frames `begin`, `reject`) and changes nothing, and the message is one
+sentence naming the first rule broken and the node ID. The JSON layer checks rules 1
+and 2 while decoding the text; the engine (`validateSnapshot`) checks rules 3 to 10 on the
+decoded snapshot; only then is the structure replaced.
 
-1. Valid JSON; `format` is `"dslab-structure"`; `formatVersion` is 1;
+1. Valid JSON holding one object; `format` is `"dslab-structure"`; `formatVersion` is 1;
    `snapshot.structure` equals the structure being imported into.
-2. Exactly the fields of 5.4 for that structure: none missing, none extra.
+2. Exactly the fields shown above and the fields of 5.4 for that structure: none missing,
+   none extra, each of the right type (32-bit integers; links `null` or an ID from 1;
+   colors `"red"` or `"black"`; `nextId` a whole number from 1 to 2,147,483,648).
 3. At most 200 nodes; `size` equals the number of nodes; IDs unique, in 1 to
    2,147,483,647 and listed in ascending order; values are 32-bit integers.
 4. Every link refers to a listed node or is `null`.
@@ -694,8 +720,11 @@ restore) accepts it only if all of the following hold. Otherwise it fails with
 7. BST family: in-order values strictly increase (so there are no duplicates).
 8. AVL: every `height` equals the recomputed height, and every `balance` equals
    height(left) − height(right) and is −1, 0 or +1.
-9. Red-black: colors are `"red"` or `"black"`; the root is black; no red node has a red
-   child; every path to NIL has the same number of black nodes.
+9. Red-black: colors are `"red"` or `"black"`; `nilColor` is `"black"`; the root is
+   black; no red node has a red child; every path to NIL has the same number of black
+   nodes.
+10. `nextId` is larger than every node ID (and at most 2,147,483,648, which means the
+    IDs are used up).
 
 Hand-edited files with inconsistent derived fields (`size`, `rear`, `parent`, `height`,
 `balance`) are rejected, never silently repaired: the file must be a snapshot the engine
@@ -721,11 +750,12 @@ ran.
 | `pointers` | object, name → ID or `null` | The algorithm's named node variables that this step uses, for example `{"parent": 2, "curr": null}`. `null` means NIL. Entry pointers are not repeated here; they are in the snapshot. |
 | `output` | array of values | Traversals only: the values visited so far. `[]` otherwise. |
 | `pending` | array of IDs | Level-order traversal only: the queue's contents, front first. `[]` otherwise. |
+| `counters` | object | The algorithm counters of 6.5 at the moment this frame was recorded (work done so far). The last frame's counters equal `metrics.algorithm`. Added in milestone 6 so the UI can show the counts growing during playback. |
 | `snapshot` | snapshot | The full structure at this moment (5.4). |
 
 Rule 6 asks for snapshot, highlighted node and edge IDs, event type, explanation and step
-ID. `index`, `pointers`, `output` and `pending` are additions that make playback and
-teaching clearer.
+ID. `index`, `pointers`, `output`, `pending` and `counters` are additions that make
+playback and teaching clearer.
 
 ### 6.2 Event types (closed list)
 
@@ -743,8 +773,11 @@ teaching clearer.
 | `unlink` | A link or entry pointer was set to NIL, or a node was detached. |
 | `remove` | A node was freed; it is absent from this frame's snapshot. |
 | `update` | A stored field other than a link or color changed (AVL height). |
+| `imbalance` | AVL: a node's balance is ±2, or the rebalancing case (LL, LR, RR, RL) was chosen; the explanation names it. |
+| `fixupCase` | Red-black: a fix-up case (insert 1–3, delete 1–4) was recognised; the explanation names it and why it applies. |
 | `rotate` | A left or right rotation finished. |
-| `recolor` | One or more red-black colors changed in one step. |
+| `recolor` | A red-black color was assigned (one frame per assignment). |
+| `balanced` | A fix-up finished and the tree's invariants hold again. AVL: the walk reached the root; every balance on the path is −1, 0 or +1. Red-black: all five properties hold. |
 | `restore` | `undo`, `redo` or `import` replaced the whole structure. |
 | `reject` | The operation was rejected. Always the last frame of an operation error. |
 | `done` | The operation succeeded. Always the last frame of a success. |
@@ -752,7 +785,7 @@ teaching clearer.
 ### 6.3 Step IDs
 
 - Format: `<structure>.<operation>.<step>`, all lower camelCase, for example
-  `bst.insert.goLeft` or `redBlack.delete.case2`. Shared operations from 2.8 use `common`
+  `bst.insert.goLeft` or `redBlack.deleteFixup.case2`. Shared operations from 2.8 use `common`
   as the structure (`common.undo.restore`).
 - Every step ID appears in the catalog listing for its operation (5.6).
 - Step IDs are **stable**: once released, renaming or removing one is a breaking change
@@ -855,6 +888,7 @@ Response:
       "pointers": {},
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 0, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "stack", "size": 2, "top": 2,
         "nodes": [
@@ -872,6 +906,7 @@ Response:
       "pointers": { "node": 3 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 0, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "stack", "size": 3, "top": 2,
         "nodes": [
@@ -890,6 +925,7 @@ Response:
       "pointers": { "node": 3 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 1, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "stack", "size": 3, "top": 2,
         "nodes": [
@@ -908,6 +944,7 @@ Response:
       "pointers": { "node": 3 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 2, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "stack", "size": 3, "top": 3,
         "nodes": [
@@ -926,6 +963,7 @@ Response:
       "pointers": {},
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 2, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "stack", "size": 3, "top": 3,
         "nodes": [
@@ -1020,6 +1058,7 @@ Response:
       "pointers": {},
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 0, "nodesVisited": 0, "linksChanged": 0, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 3, "root": 1,
         "nodes": [
@@ -1038,6 +1077,7 @@ Response:
       "pointers": { "parent": 1, "curr": 2 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 1, "nodesVisited": 2, "linksChanged": 0, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 3, "root": 1,
         "nodes": [
@@ -1056,6 +1096,7 @@ Response:
       "pointers": { "parent": 2, "curr": null },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 2, "nodesVisited": 2, "linksChanged": 0, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 3, "root": 1,
         "nodes": [
@@ -1074,6 +1115,7 @@ Response:
       "pointers": { "parent": 2, "node": 4 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 2, "nodesVisited": 2, "linksChanged": 1, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 4, "root": 1,
         "nodes": [
@@ -1093,6 +1135,7 @@ Response:
       "pointers": { "parent": 2, "node": 4 },
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 3, "nodesVisited": 2, "linksChanged": 2, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 4, "root": 1,
         "nodes": [
@@ -1112,6 +1155,7 @@ Response:
       "pointers": {},
       "output": [],
       "pending": [],
+      "counters": { "comparisons": 3, "nodesVisited": 2, "linksChanged": 2, "rotations": 0, "recolors": 0 },
       "snapshot": {
         "structure": "bst", "size": 4, "root": 1,
         "nodes": [
@@ -1163,7 +1207,7 @@ All of these live in `engine/include/dslab/Limits.h`; tests check each bound.
 | Node ID range | 1 to 2,147,483,647, never reused | `ID_EXHAUSTED` if the counter would pass the maximum. |
 | Frames per operation | 512 | The worst real operation is a traversal of 200 nodes: 2n + 2 = 402 frames. Tests require ≤ 2n + 16. If the cap were ever hit, step frames stop being stored, the final `done`/`reject` frame is still added and `metrics.trace.truncated` is true. Tests fail on that. |
 | Node views per response | ≤ 512 × 200 = 102,400 | About 3.7 MB in C++; at most about 8 MB of JSON (about 6.5 MB for a 200-node red-black traversal; about 0.5 MB for a typical AVL insert into 200 nodes). |
-| History | 50 undo + 50 redo snapshots per structure | The oldest undo entry is dropped when a 51st is pushed. All 7 structures together hold ≤ 7 × 100 × 200 = 140,000 node views (about 5 MB). |
+| History | 50 snapshots per structure, undo and redo together | The oldest undo entry is dropped when a 51st change is recorded. Undo and redo only move entries between the two lists, so their sum never exceeds 50. All 7 structures together hold ≤ 7 × 50 × 200 = 70,000 node views (under 3 MB). |
 | Request text | 1 MiB (1,048,576 bytes) | `BAD_REQUEST` beyond it. An export of 200 nodes is about 16 KB. |
 | Explanation | 1 sentence, ≤ 140 characters | Checked by tests. |
 | Recursion depth | ≤ 200 | Tree height ≤ n. The Wasm stack is set to 1 MiB, and an end-to-end test traverses a degenerate 200-node BST. |
@@ -1204,7 +1248,9 @@ All of these live in `engine/include/dslab/Limits.h`; tests check each bound.
    link.
 5. **Structures can be neither copied nor moved**, so the addresses of nodes and of the
    sentinel never change while links point at them. Undo, redo and import go through
-   `restore(snapshot)`: it validates first, then rebuilds the pool and links in place.
+   `restore(snapshot)`, which rebuilds the pool and links in place (same IDs and ID
+   counter). Import calls it only after `validateSnapshot()` accepted the file; undo and
+   redo give it snapshots the engine made itself.
 6. **Destruction is automatic and flat.** Destroying a structure destroys its pool, which
    frees every node. Nodes do not own each other, so there is no deep recursive
    destructor chain.
@@ -1230,12 +1276,12 @@ list and the affected sections together.
 | D2 | **(asked)** Two-child delete in BST, AVL and red-black uses the **in-order successor**. | Course convention (CLRS). |
 | D3 | The successor **node is relinked**, never value-copied. | Keeps every value attached to its ID (rule 3), so animations stay truthful. |
 | D4 | **(asked)** AVL: height(NIL) = 0, leaf = 1, balance = height(left) − height(right). | Course convention; no negative heights on screen. |
-| D5 | **(asked)** Red-black follows CLRS with one shared black NIL sentinel; the sentinel is never drawn. | Course convention. |
+| D5 | **(asked)** Red-black follows CLRS with one shared black NIL sentinel; the sentinel is not a snapshot node. The UI can draw the NIL leaves from the `null` links (a toggle, off by default). | Course convention. Milestone 5 added the toggle at the owner's request. |
 | D6 | **(asked)** Vendored third-party code: nlohmann/json (protocol layer and native tests only) and doctest (tests only). Nothing else without asking. | A tested JSON parser and test framework; we write only the code that matters for the course. |
 | D7 | Ownership: one `NodePool` per structure owns all nodes; every link is a non-owning raw pointer. | Mid-operation snapshots stay complete; rotations and transplants read like the textbook; RAII frees everything. |
 | D8 | Node IDs: per structure, from 1, monotonic, never reused (not lowered by `clear`, `undo`, `import`). | IDs stay unambiguous across history and animation. |
 | D9 | One Embind class `Engine` with one method `handle(string) → string`, carrying JSON. | One contract for browser and native tests, and golden files; no per-call Embind object lifetimes. |
-| D10 | AVL tree is recursive without parent pointers; BST and red-black are iterative CLRS with parent pointers; the binary tree stores parent pointers. | Each matches how that structure is usually taught. |
+| D10 | BST, AVL and red-black are iterative CLRS-style trees with parent pointers; the binary tree stores parent pointers too. The AVL tree is the BST plus heights and a fix-up walk to the root (avl.md). | One node shape and one rotation style for every search tree. Milestone 4 changed the AVL tree from the recursive design first planned, at the owner's request to reuse the BST's structure: each rotation is then one consistent frame. |
 | D11 | Traversals are four operations (`preorder`, `inorder`, `postorder`, `levelorder`), shared as read-only templates across the four trees; level order uses a plain array as its queue (never `std::queue`). | Simple step IDs; one place to explain traversals. |
 | D12 | BST-family `delete` and `search` take a value. Clicking a node only fills the value box. | The textbook algorithms are keyed by value; selection itself stays by ID. |
 | D13 | `clear` exists on every structure (the brief lists it for stack and queue). | Needed to start over on any tab; frees nodes one by one with frames. |
@@ -1248,8 +1294,9 @@ list and the affected sections together.
 | D20 | Exceptions are enabled (native default; Wasm `-fwasm-exceptions`), but algorithms never throw for expected errors. The protocol and engine layers catch stray exceptions and roll back. | The module never aborts; errors stay typed values. |
 | D21 | Input boxes accept only an optional minus sign and 1–10 digits; C++ checks the range. | Exact in JavaScript numbers; all rules stay in C++. |
 | D22 | Export and import exchange text; the document is the snapshot plus a format header; import validates everything and keeps IDs; import is undoable. | TypeScript never interprets structure data; a round trip is exact. |
-| D23 | Undo/redo keep final snapshots only (no frames); `undo`/`redo` show a single `restore` frame. History recording starts in milestone 2 so `history` counts are correct from the first golden file; the `undo`/`redo` operations arrive in milestone 7. | Bounded memory; no golden-file churn. |
-| D24 | Step IDs are `<structure>.<operation>.<step>`, mirror cases share an ID, shared operations use `common`. | Stable and readable. |
+| D23 | Undo/redo are snapshot-based: each entry is the final snapshot from before a change (no frames) and a label naming the change; `undo`/`redo` show a single `restore` frame between `begin` and `done`. History recording starts in milestone 2 so `history` counts are correct from the first golden file; the `undo`/`redo` operations arrived in milestone 7 (trade-off: architecture.md 2.9). | Exact by construction, one `restore()` per structure, bounded memory; no golden-file churn. |
+| D30 | The ID counter is part of a structure's state: `undo`, `redo` and `import` restore it exactly, and the export document carries it as `nextId`. This replaces the earlier rule "restores never lower the counter" (milestone 7, at the owner's request). | Undo returns the exact earlier state; an export and import round trip is exact. IDs stay unique within every state. |
+| D24 | Step IDs are `<structure>.<operation>.<step>`, shared operations use `common`. Mirror cases share an ID, except the red-black fix-up cases, whose mirror branches end in `Mirror`. | Stable and readable. Milestone 5 gave the red-black mirrors their own IDs, so tests can prove that both sides of every case run. |
 | D25 | Explanations are English sentences generated in C++ and name values, not IDs. | Students think in values; the text is next to the code that knows the facts. |
 | D26 | `comparisons` counts one per three-way comparison with a node's value. | Matches how textbooks count key comparisons. |
 | D27 | Wire JSON is compact; golden files and exports are 2-space indented; comparison ignores whitespace but not key order. | Small messages, readable files, deterministic tests. |

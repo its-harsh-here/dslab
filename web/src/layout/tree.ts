@@ -1,4 +1,4 @@
-// Layout of the binary tree and the BST: x = in-order rank, y = depth. Because
+// Layout of every tree: x = in-order rank, y = depth. Because
 // x follows in-order, a left child is always left of its parent and a right
 // child always right of it, even when the parent has only one child.
 import type { NodeId, TreeNode, TreeSnapshot } from '../engine/protocol';
@@ -60,5 +60,12 @@ export const treeLayout: LayoutStrategy<TreeSnapshot> = {
   },
 
   // Points are node centres, so the box reaches one radius each way.
-  box: { width: TREE_RADIUS, height: TREE_RADIUS + 16, padLeft: TREE_RADIUS + 24, padRight: 70, padTop: 76, padBottom: 12 },
+  box: { width: TREE_RADIUS, height: TREE_RADIUS + 30, padLeft: TREE_RADIUS + 34, padRight: 70, padTop: 76, padBottom: 12 },
+};
+
+// The red-black tree: as above, with room below the lowest nodes for the NIL
+// leaves that can be shown (they hang 58 px below a node's centre).
+export const redBlackLayout: LayoutStrategy<TreeSnapshot> = {
+  ...treeLayout,
+  box: { ...treeLayout.box, height: TREE_RADIUS + 40 },
 };

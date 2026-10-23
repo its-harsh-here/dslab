@@ -20,11 +20,13 @@ std::string wireName(StructureKind structure);
 // pointers are NIL. Linear: the chain from the entry pointer reaches every
 // node exactly once and ends at NIL; a queue's rear is its last node. Trees:
 // one root, one parent link per other node, parent fields correct, every node
-// reachable; a BST's in-order values strictly increase.
+// reachable; a BST's in-order values strictly increase. AVL: heights and
+// balances. Red-black: the five properties (docs/red-black.md).
 std::string checkSnapshot(const Snapshot& snapshot);
 
 // Frame-list invariants of docs/operation-contract.md 6.6 for one response
 // that reached a structure. 'before' is the state before the operation.
+// AVL and red-black frames that break a tree property must say it is temporary.
 std::string checkFrames(const Response& response, const Snapshot& before);
 
 }  // namespace dslab::test

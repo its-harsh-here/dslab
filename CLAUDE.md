@@ -9,13 +9,14 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
 
 ## Commands
 - `npm run test:cpp` — native CMake build (build/native) + doctest tests
-- `npm run test:cpp:asan` — the same tests with AddressSanitizer + UBSan (build/asan, ~3 min)
+- `npm run test:cpp:asan` — the same tests with ASan + UBSan at -O1 (build/asan, ~25 min)
 - `npm run build:wasm` — Emscripten build (build/wasm), copied into web/src/generated/.
   Needs `EMSDK` set or em++ on PATH; in your shell: `export EMSDK=~/tools/emsdk`
 - `npm run dev` — build:wasm, then the Vite dev server on http://localhost:5173/
 - `npm run build` / `npm run preview` — build:wasm + tsc + Vite build into dist/ / serve it
 - `bash scripts/check-env.sh` — verify the toolchain
-- Not yet: `npm run test:e2e` (Playwright suite, a later milestone). Keep this list current.
+- `npm run test:e2e` — build, native dslab_cli, then Playwright (web/e2e) against
+  `npm run preview`, channel "chromium" (bundled). Keep this list current.
 
 ## Environment
 - Ubuntu on WSL2, ARM64 (aarch64). Project lives in ~/projects/dslab, never /mnt/c.
@@ -60,8 +61,9 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
 
 ## Course conventions (decided; see Decisions in docs/operation-contract.md)
 - Stack and queue are linked nodes. Two-child delete uses the in-order successor node,
-  relinked, never value-copied. AVL: height(NIL) 0, leaf 1, balance = h(left) − h(right).
-  Red-black: CLRS with one shared black NIL sentinel.
+  relinked, never value-copied. AVL (docs/avl.md): height(NIL) 0, leaf 1, balance =
+  h(left) − h(right), parent pointers + fix-up walk. Red-black (docs/red-black.md): CLRS,
+  one black NIL sentinel owned by the tree; mirror fix-up cases have `…Mirror` step IDs.
 
 ## Layout
 engine/include · engine/src · engine/tests · engine/bindings · engine/third_party ·

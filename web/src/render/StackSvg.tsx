@@ -1,13 +1,21 @@
 // Draws one moment of a stack animation: the frame C++ recorded, at the
 // positions the layout computed. Purely presentational.
-import { edgeId, type Frame, type StackSnapshot } from '../engine/protocol';
+import { edgeId, type Frame, type NodeId, type StackSnapshot } from '../engine/protocol';
 import { chainFrom, type Layout, type ViewBox } from '../layout/layout';
 import { STACK_NODE } from '../layout/linear';
 import { ArrowDefs, BoxNode, PointerLabels, useArrows } from './parts';
 
 const { width: W, height: H } = STACK_NODE;
 
-export function StackSvg({ frame, layout, viewBox }: { frame: Frame<StackSnapshot>; layout: Layout; viewBox: ViewBox }) {
+interface Props {
+  frame: Frame<StackSnapshot>;
+  layout: Layout;
+  viewBox: ViewBox;
+  selectedId?: NodeId | null;
+  onSelect?: (id: NodeId) => void;
+}
+
+export function StackSvg({ frame, layout, viewBox, selectedId, onSelect }: Props) {
   const arrows = useArrows();
   const { snapshot, highlight, pointers } = frame;
   const reachable = new Set(chainFrom(snapshot.nodes, snapshot.top));
@@ -22,8 +30,8 @@ export function StackSvg({ frame, layout, viewBox }: { frame: Frame<StackSnapsho
       : `Stack with ${snapshot.size} node${snapshot.size === 1 ? '' : 's'}` + (topNode ? `, top value ${topNode.value}` : '');
 
   return (
-    <svg className="structure-svg" role="img" aria-label={label} width={viewBox.width} height={viewBox.height}
-      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
+    <svg className="structure-svg" role="group" aria-label={label} width="100%" height="100%"
+      preserveAspectRatio="xMidYMid meet" viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
       <ArrowDefs arrows={arrows} />
 
       {/* next links first, so nodes sit on top of them */}
@@ -54,7 +62,8 @@ export function StackSvg({ frame, layout, viewBox }: { frame: Frame<StackSnapsho
         const at = layout.nodes.get(node.id);
         return at ? (
           <BoxNode key={node.id} id={node.id} value={node.value} at={at} width={W} height={H}
-            highlighted={hotNodes.has(node.id)} detached={!reachable.has(node.id)} />
+            highlighted={hotNodes.has(node.id)} detached={!reachable.has(node.id)}
+            selected={selectedId === node.id} onSelect={onSelect} />
         ) : null;
       })}
 

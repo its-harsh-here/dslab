@@ -1,48 +1,45 @@
-// Turns the frames of one C++ response into a timed animation. Nothing here
-// creates or merges frames: each frame is shown exactly as C++ recorded it.
+// Turns the frames of one C++ response into something that can be drawn at any
+// moment. Nothing here creates or merges frames: each frame is shown exactly as
+// C++ recorded it. Timing lives in the player (player.ts).
 import type { Frame, Snapshot } from '../engine/protocol';
-import { interpolate, layoutFrames, viewBoxFor, type Layout, type LayoutStrategy, type ViewBox } from '../layout/layout';
+import { focusFor, interpolate, layoutFrames, viewBoxFor, type Layout, type LayoutStrategy, type ViewBox } from '../layout/layout';
 
 export interface Animation<S extends Snapshot> {
-  readonly id: number;
   readonly frames: readonly Frame<S>[];
+  /** Node positions for each frame, each continuing from the one before. */
   readonly layouts: readonly Layout[];
-  /** What was on screen when the animation started (null on first load). */
+  /** What was on screen before the operation (null on first load). */
   readonly from: Layout | null;
-  /** Time each frame stays on screen, and how much of it nodes spend moving. */
-  readonly frameMs: number;
-  readonly moveMs: number;
-  /** One viewBox for the whole animation, so the drawing never jumps. */
+  /** One viewBox for the whole operation, so the drawing never jumps while it plays. */
   readonly viewBox: ViewBox;
+  /** Around the nodes the operation highlights: what to show when everything would be too small. */
+  readonly focus: ViewBox | null;
 }
 
 export function createAnimation<S extends Snapshot>(
-  id: number,
   frames: readonly Frame<S>[],
   from: Layout | null,
   strategy: LayoutStrategy<S>,
 ): Animation<S> {
   const layouts = layoutFrames(frames, from, strategy);
-  // About three seconds per operation, but never slower than 550 ms per frame.
-  const frameMs = Math.min(550, Math.max(25, 3000 / frames.length));
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const moveMs = reducedMotion ? 0 : Math.min(350, frameMs * 0.7);
   const viewBox = viewBoxFor(from ? [from, ...layouts] : layouts, strategy.box);
-  return { id, frames, layouts, from, frameMs, moveMs, viewBox };
+  return { frames, layouts, from, viewBox, focus: focusFor(frames, layouts, strategy.box) };
 }
 
-export function totalMs(animation: Animation<Snapshot>): number {
-  return animation.frames.length * animation.frameMs;
+/**
+ * Frame `index` and its node positions, `t` of the way (0 to 1) through the
+ * move from the previous frame's positions. Highlights, pointers, output and
+ * every node and edge position all come from this one frame and this one
+ * layout, so they can never disagree.
+ */
+export function sample<S extends Snapshot>(animation: Animation<S>, index: number, t: number): { frame: Frame<S>; layout: Layout } {
+  const before = index === 0 ? animation.from : animation.layouts[index - 1];
+  return { frame: animation.frames[index], layout: interpolate(before, animation.layouts[index], ease(t)) };
 }
 
-/** The frame on screen and the node positions at `elapsed` milliseconds. */
-export function sample<S extends Snapshot>(animation: Animation<S>, elapsed: number): { frame: Frame<S>; layout: Layout } {
-  const last = animation.frames.length - 1;
-  const index = Math.max(0, Math.min(Math.floor(elapsed / animation.frameMs), last));
-  const intoFrame = elapsed - index * animation.frameMs;
-  const t = animation.moveMs === 0 ? 1 : Math.min(1, intoFrame / animation.moveMs);
-  const from = index === 0 ? animation.from : animation.layouts[index - 1];
-  return { frame: animation.frames[index], layout: interpolate(from, animation.layouts[index], ease(t)) };
+/** The final layout of an animation: where the next operation starts from. */
+export function finalLayout(animation: Animation<Snapshot>): Layout {
+  return animation.layouts[animation.layouts.length - 1];
 }
 
 function ease(t: number): number {

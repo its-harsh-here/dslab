@@ -1,31 +1,50 @@
+/* DSLab: plain, academic styling. One accent (blue) marks highlights,
+   selection and focus. Red and black are used only for red-black nodes and
+   NIL leaves; warnings and errors use amber. */
+
 :root {
   --bg: #ffffff;
+  --surface: #f6f8fa;
   --text: #1f2328;
   --muted: #59636e;
   --line: #8c959f;
-  --node-fill: #f6f8fa;
+  --border: #d1d9e0;
+  --node-fill: #ffffff;
   --node-stroke: #57606a;
   --accent: #0969da;
   --accent-fill: #ddf4ff;
-  --select: #8250df;
-  --error: #cf222e;
-  --error-fill: #ffebe9;
+  --accent-text: #ffffff;
+  --warn: #9a6700;
+  --warn-strong: #bf8700;
+  --warn-fill: #fff8c5;
+  --rb-red: #cf222e;
+  --rb-black: #24292f;
+  --rb-text: #ffffff;
+  --nil-fill: #24292f;
+  --code-current: #ddf4ff;
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0d1117;
+    --surface: #151b23;
     --text: #e6edf3;
     --muted: #9198a1;
     --line: #6e7681;
-    --node-fill: #161b22;
+    --border: #3d444d;
+    --node-fill: #0d1117;
     --node-stroke: #8b949e;
     --accent: #4493f8;
     --accent-fill: #12263d;
-    --select: #ab7df8;
-    --error: #f85149;
-    --error-fill: #2d1214;
+    --accent-text: #0d1117;
+    --warn: #d29922;
+    --warn-strong: #e3b341;
+    --warn-fill: #2e2410;
+    --rb-red: #da3633;
+    --rb-black: #010409;
+    --nil-fill: #010409;
+    --code-current: #12263d;
   }
 }
 
@@ -38,123 +57,324 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
-main {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
 }
 
 h1 {
-  margin: 0;
-  font-size: 1.6rem;
+  font-size: 1.25rem;
 }
 
 h2 {
-  font-size: 1.2rem;
-  margin: 20px 0 12px;
+  font-size: 1.1rem;
 }
 
-.subtitle,
-.step-info {
-  color: var(--muted);
-  margin: 4px 0 0;
+h3 {
+  font-size: 0.95rem;
 }
 
-/* Tabs */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 20px;
-  border-bottom: 1px solid var(--line);
-}
-
-.tabs button {
-  padding: 8px 14px;
+button,
+input,
+select {
   font: inherit;
-  border: 1px solid transparent;
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  background: none;
-  color: var(--muted);
+  color: inherit;
+}
+
+button,
+select {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
   cursor: pointer;
 }
 
-.tabs button[aria-selected='true'] {
+button:hover:not(:disabled) {
   border-color: var(--line);
-  background: var(--bg);
-  color: var(--text);
-  font-weight: 600;
-  margin-bottom: -1px;
 }
 
-/* Controls */
-.controls {
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+input[type='text'] {
+  width: 7.5rem;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+input.short {
+  width: 4rem;
+}
+
+input[aria-invalid='true'] {
+  border-color: var(--warn-strong);
+}
+
+/* One visible focus style for every control. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.label,
+.group-label,
+.meta {
+  color: var(--muted);
+}
+
+.label {
+  font-size: 0.85rem;
+  margin-right: 6px;
+}
+
+/* --- The page ------------------------------------------------------------- */
+
+.app {
+  display: grid;
+  grid-template-columns: 172px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    'header header'
+    'nav main';
+  height: 100vh;
+}
+
+.app-header {
+  grid-area: header;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.loading,
+.load-error {
+  grid-column: 1 / -1;
+  margin: 24px 16px;
+}
+
+.structure-nav {
+  grid-area: nav;
+  border-right: 1px solid var(--border);
+  padding: 12px 8px;
+  overflow-y: auto;
+}
+
+.structure-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.structure-nav button {
+  width: 100%;
+  text-align: left;
+  border-color: transparent;
+  background: none;
+  padding: 7px 10px;
+}
+
+.structure-nav button[aria-current='page'] {
+  border-color: var(--accent);
+  background: var(--accent-fill);
+  font-weight: 600;
+}
+
+.app-main {
+  grid-area: main;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* --- One structure's workspace ---------------------------------------------- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-rows: auto minmax(240px, 1fr) auto 112px;
+  grid-template-areas:
+    'controls side'
+    'stage side'
+    'player side'
+    'history side';
+  height: 100%;
+}
+
+.ws-controls {
+  grid-area: controls;
+  padding: 10px 16px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ws-stage {
+  grid-area: stage;
+  min-height: 0;
+  padding: 8px 16px 0;
+}
+
+.ws-player {
+  grid-area: player;
+  padding: 6px 16px;
+}
+
+.ws-history {
+  grid-area: history;
+  min-height: 0;
+  padding: 6px 16px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.ws-side {
+  grid-area: side;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --- Operations ----------------------------------------------------------- */
+
+.operation-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin-bottom: 6px;
 }
 
-.controls input {
-  width: 8rem;
-  padding: 6px 8px;
-  font: inherit;
+.history-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.controls button {
-  padding: 6px 14px;
-  font: inherit;
+.controls,
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 0 0 6px;
+}
+
+.examples {
+  gap: 6px 18px;
+}
+
+.example {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.examples-box summary {
   cursor: pointer;
-}
-
-.controls button:disabled {
-  cursor: not-allowed;
-}
-
-.traversals {
-  margin-top: 8px;
-}
-
-.controls .group-label {
   color: var(--muted);
-  margin-left: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
 }
 
-.selection {
-  margin: 8px 0 0;
+.narrow-only {
+  display: none;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 2.1rem;
+  margin: 0;
   color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.status-error,
+.input-error {
+  color: var(--warn);
 }
 
 .input-error {
-  color: var(--error);
-  margin: 6px 0 0;
+  margin: 0 0 6px;
+  font-size: 0.9rem;
 }
 
-/* The drawing area scrolls when the structure is large. */
+/* --- The drawing ------------------------------------------------------------ */
+
+.stage-frame {
+  position: relative;
+  height: 100%;
+}
+
 .stage {
-  display: flex;
-  flex-direction: column;
-  min-height: 300px;
-  max-height: 65vh;
-  overflow: auto;
-  margin-top: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.stage:active {
+  cursor: grabbing;
 }
 
 .structure-svg {
-  flex: none;
-  align-self: flex-start;
+  display: block;
 }
 
-/* The stack sits at the bottom, so a growing stack extends upwards. */
-.stage-bottom .structure-svg {
-  margin-top: auto;
+.stage-tools {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.stage-tools button {
+  min-width: 2.2rem;
+  padding: 3px 8px;
+  background: var(--bg);
 }
 
 /* Nodes */
@@ -166,21 +386,23 @@ h2 {
 }
 
 .node.highlighted rect,
-.node.highlighted circle {
+.node.highlighted .node-body {
   fill: var(--accent-fill);
   stroke: var(--accent);
   stroke-width: 3;
 }
 
 .node.detached rect,
-.node.detached circle {
+.node.detached .node-body {
   stroke-dasharray: 5 4;
 }
 
-.node.selected rect,
-.node.selected circle {
-  stroke: var(--select);
-  stroke-width: 3.5;
+/* Selection: a ring around the node, in the accent colour. */
+.node .selection-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
 }
 
 .node[role='button'] {
@@ -191,10 +413,10 @@ h2 {
   outline: none;
 }
 
-/* Keyboard users still see where focus is. */
-.node[role='button']:focus-visible {
-  outline: 2px solid var(--select);
-  outline-offset: 4px;
+.node[role='button']:focus-visible .node-body,
+.node[role='button']:focus-visible rect:not(.selection-ring) {
+  stroke: var(--accent);
+  stroke-width: 4;
 }
 
 .node-value {
@@ -248,7 +470,6 @@ h2 {
 .null-text {
   fill: var(--muted);
   font-size: 11px;
-  font-weight: 400;
 }
 
 .marker text {
@@ -265,47 +486,336 @@ h2 {
 .pointer-label {
   fill: var(--accent);
   font-size: 13px;
+  font-weight: 600;
 }
 
-/* Below the drawing */
+/* AVL: a balance outside -1..+1 (only while rebalancing) is marked in amber. */
+.node.unbalanced .node-body {
+  stroke: var(--warn-strong);
+  stroke-width: 3;
+}
+
+.avl-label {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.avl-label.unbalanced {
+  fill: var(--warn);
+  font-weight: 700;
+}
+
+/* Red-black: the fill shows the colour, the R or B badge says it in text. */
+.node.rb-red > .node-body,
+.node.rb-red.highlighted > .node-body {
+  fill: var(--rb-red);
+}
+
+.node.rb-black > .node-body,
+.node.rb-black.highlighted > .node-body {
+  fill: var(--rb-black);
+}
+
+.node.rb-red.highlighted > .node-body,
+.node.rb-black.highlighted > .node-body {
+  stroke: var(--accent);
+  stroke-width: 4;
+}
+
+.node.rb-red .node-value,
+.node.rb-black .node-value {
+  fill: var(--rb-text);
+}
+
+.node .rb-badge circle {
+  fill: var(--bg);
+  stroke: var(--node-stroke);
+  stroke-width: 1.2;
+}
+
+.node .rb-badge text {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.nil-leaf line {
+  stroke: var(--line);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.nil-leaf rect {
+  fill: var(--nil-fill);
+  stroke: var(--node-stroke);
+  stroke-width: 1;
+}
+
+.nil-leaf text {
+  fill: var(--rb-text);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* --- Playback ------------------------------------------------------------- */
+
+.player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.player-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.player .play {
+  min-width: 5rem;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.speed select {
+  padding: 4px 6px;
+}
+
+.timeline {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timeline input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.step-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* --- History ---------------------------------------------------------------- */
+
+.history {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.history h3 {
+  margin-bottom: 4px;
+}
+
+.history-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 0 0 2rem;
+  font-size: 0.9rem;
+}
+
+.history-list li {
+  padding: 1px 0;
+}
+
+.history-request {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.history-frames {
+  color: var(--muted);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.history-list li.failed .history-result {
+  color: var(--warn);
+}
+
+/* --- Right-hand panels ---------------------------------------------------- */
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+.panel h3 {
+  margin-bottom: 6px;
+}
+
 .explanation {
-  font-size: 1.1rem;
-  margin: 16px 0 0;
-  min-height: 1.5em;
+  margin: 0 0 4px;
+  font-size: 1rem;
 }
 
-.output-strip {
-  margin: 8px 0 0;
+.meta {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.output {
+  margin-top: 6px;
+}
+
+.value-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.value-list li {
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-weight: 600;
 }
 
 .result {
-  margin: 12px 0 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin: 8px 0 0;
 }
 
-.error {
-  margin: 12px 0 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: var(--error);
-  background: var(--error-fill);
+.result.error {
+  padding: 6px 8px;
+  border-left: 3px solid var(--warn-strong);
+  background: var(--warn-fill);
 }
 
-.loading {
-  margin-top: 24px;
+.pseudocode {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 290px;
+  overflow: auto;
+  background: var(--surface);
+  border-radius: 4px;
 }
+
+.pseudocode li {
+  padding-right: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  border-left: 3px solid transparent;
+}
+
+.pseudocode code {
+  font: inherit;
+}
+
+.pseudocode li.current {
+  background: var(--code-current);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+.properties {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+}
+
+.properties div,
+.shortcuts dl div {
+  display: contents;
+}
+
+.properties dt,
+.shortcuts dt {
+  color: var(--muted);
+}
+
+.properties dd,
+.shortcuts dd {
+  margin: 0;
+}
+
+.counters {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.counters caption {
+  text-align: left;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+
+.counters th,
+.counters td {
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+
+.counters th[scope='row'],
+.counters thead th:first-child {
+  text-align: left;
+  font-weight: 400;
+}
+
+.counters thead th {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.complexity {
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+
+details.panel summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.text-view ul,
+.text-view ol {
+  margin: 4px 0;
+  padding-left: 1.4rem;
+}
+
+.shortcuts dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 6px 0 0;
+}
+
+/* --- The engine could not load -------------------------------------------- */
 
 .load-error {
-  margin-top: 24px;
   padding: 12px 16px;
-  border: 1px solid var(--error);
-  border-radius: 8px;
-  background: var(--error-fill);
+  border: 1px solid var(--warn-strong);
+  border-radius: 4px;
+  background: var(--warn-fill);
 }
 
 .load-error h2 {
   margin-top: 0;
-  color: var(--error);
+  color: var(--warn);
 }
 
 .load-error dt {
@@ -315,4 +825,87 @@ h2 {
 .load-error dd {
   margin: 0 0 8px;
   overflow-wrap: anywhere;
+}
+
+/* --- Narrow screens: everything in one column ------------------------------ */
+
+@media (max-width: 899px) {
+  .app {
+    display: block;
+    height: auto;
+  }
+
+  .app-header {
+    padding: 8px 12px;
+  }
+
+  .subtitle,
+  .wide-only {
+    display: none;
+  }
+
+  .narrow-only {
+    display: inline;
+  }
+
+  .structure-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+  }
+
+  .structure-nav ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .structure-nav button {
+    width: auto;
+    padding: 3px 9px;
+    border-color: var(--border);
+  }
+
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .ws-controls {
+    padding: 10px 12px 4px;
+  }
+
+  .ws-stage {
+    height: 55vh;
+    padding: 8px 12px 0;
+  }
+
+  /* Vertical swipes still scroll the page; sideways drags pan the drawing. */
+  .stage {
+    touch-action: pan-y;
+  }
+
+  .ws-player {
+    padding: 6px 12px;
+  }
+
+  .ws-side {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    overflow: visible;
+    padding: 10px 12px;
+  }
+
+  .ws-history {
+    height: 180px;
+    padding: 6px 12px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
 }

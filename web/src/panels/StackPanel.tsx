@@ -1,44 +1,51 @@
 import { useState, type FormEvent } from 'react';
 
-import type { LoadedEngine } from '../engine/loadEngine';
-import type { StackSnapshot } from '../engine/protocol';
-import { stackLayout } from '../layout/linear';
-import { useStructure } from '../playback/useStructure';
+import type { NodeId, StackSnapshot } from '../engine/protocol';
+import { usePlayer } from '../playback/usePlayer';
 import { StackSvg } from '../render/StackSvg';
-import { INTEGER_HINT, IntegerField, readInteger, StepReport } from './common';
+import { OpButton } from '../ui/OperationBar';
+import { Workspace, type PanelProps } from '../ui/Workspace';
+import { INTEGER_HINT, IntegerField, readInteger } from './common';
+import { animated, randomValues, setUp } from './examples';
 
-export function StackPanel({ engine }: { engine: LoadedEngine }) {
-  const view = useStructure<StackSnapshot>(engine, 'stack', stackLayout);
+export function StackPanel({ player, catalog, stageCommands }: PanelProps<StackSnapshot>) {
+  const view = usePlayer(player);
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState(false);
+  const [selectedId, setSelectedId] = useState<NodeId | null>(null);
 
-  // Engine calls happen only in event handlers, never during render
+  // Engine calls happen only in event handlers, through the player
   // (docs/architecture.md, 2.7).
   function handlePush(event: FormEvent) {
     event.preventDefault();
     const value = readInteger(input);
     setInputError(value === null);
-    if (value === null) return;
-    view.send('push', { value });
-    setInput('');
+    if (value !== null && player.run('push', { value })) setInput('');
   }
 
   return (
-    <section className="structure-panel" aria-labelledby="stack-heading">
-      <h2 id="stack-heading">Stack</h2>
-      <form className="controls" onSubmit={handlePush} noValidate>
-        <IntegerField id="stack-value" label="Value" value={input} onChange={setInput} invalid={inputError} />
-        <button type="submit">Push</button>
-        <button type="button" onClick={() => view.send('pop')}>Pop</button>
-        <button type="button" onClick={() => view.send('peek')}>Peek</button>
-        <button type="button" onClick={() => view.send('clear')}>Clear</button>
-      </form>
-      {inputError && <p className="input-error">{INTEGER_HINT}</p>}
-
-      <div className="stage stage-bottom">
-        <StackSvg frame={view.frame} layout={view.layout} viewBox={view.animation.viewBox} />
-      </div>
-      <StepReport view={view} />
-    </section>
+    <Workspace title="Stack" view={view} player={player} catalog={catalog} stageCommands={stageCommands}
+      selectedId={selectedId} hint="Click a node to see its properties."
+      controls={
+        <>
+          <form className="controls" onSubmit={handlePush} noValidate>
+            <IntegerField id="stack-value" label="Value" value={input} onChange={setInput} invalid={inputError} />
+            <OpButton type="submit">Push</OpButton>
+            <OpButton onClick={() => player.run('pop')}>Pop</OpButton>
+            <OpButton onClick={() => player.run('peek')}>Peek</OpButton>
+            <OpButton onClick={() => player.run('clear')}>Clear</OpButton>
+          </form>
+          {inputError && <p className="input-error">{INTEGER_HINT}</p>}
+        </>
+      }
+      examples={{
+        batch: { button: 'Push all', step: (value) => animated('push', value) },
+        random: (random, count) => setUp('push', randomValues(random, count)),
+      }}
+      drawing={(viewBox) => (
+        <StackSvg frame={view.frame} layout={view.layout} viewBox={viewBox} selectedId={selectedId}
+          onSelect={(id) => setSelectedId((current) => (current === id ? null : id))} />
+      )}
+    />
   );
 }
