@@ -1,4 +1,4 @@
-# DSLab: test, build and deploy to GitHub Pages (https://<user>.github.io/dslab/).
+# DSLab: test, build and deploy to GitHub Pages (https://its-harsh-here.github.io/dslab/).
 #
 # Runs on every push to main, and by hand from the Actions tab. The site is
 # deployed only if the C++ tests, the build and the browser smoke tests pass.

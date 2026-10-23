@@ -5,7 +5,7 @@ Everything happens in one browser tab on the live site.
 
 **Before you start**
 
-- Open the live site, https://<user>.github.io/dslab/ (the address in the README), in Chrome, Edge or
+- Open the live site, https://its-harsh-here.github.io/dslab/, in Chrome, Edge or
   Firefox, at full screen. Reload once so the engine is loaded.
 - Keep a terminal ready in the project folder in case the network fails: `npm run build`
   then `npm run preview`, and open http://localhost:4173/dslab/ instead. Same site, same

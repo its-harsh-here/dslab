@@ -5,7 +5,7 @@ algorithm; it is compiled to WebAssembly and drawn in the browser with React and
 Every step you see is a frame recorded by the C++ code while it runs. There is no
 JavaScript copy of any algorithm and no backend.
 
-**Live site:** https://&lt;user&gt;.github.io/dslab/ (deployed by GitHub Actions from `main`;
+**Live site:** https://its-harsh-here.github.io/dslab/ (deployed by GitHub Actions from `main`;
 see [Deployment](#deployment-github-pages)).
 
 Seven structures: stack, queue, singly linked list, ordinary binary tree, binary search
@@ -61,7 +61,7 @@ git clone https://github.com/emscripten-core/emsdk.git ~/tools/emsdk
 Get the code:
 
 ```bash
-git clone https://github.com/<user>/dslab.git
+git clone https://github.com/its-harsh-here/dslab.git
 ```
 
 ```bash
@@ -180,7 +180,7 @@ and, only if all of that passed, publishes `dist/` with the official GitHub Page
 GitHub settings to change, once:
 
 1. **Create the repository as public and name it exactly `dslab`.** The name is the URL
-   path: `https://<user>.github.io/dslab/` must match `base: '/dslab/'` in
+   path: `https://its-harsh-here.github.io/dslab/` must match `base: '/dslab/'` in
    `vite.config.ts` (also used by `playwright.config.ts`). With a free GitHub account,
    Pages works only for public repositories.
 2. Push `main` to it.
