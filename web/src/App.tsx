@@ -45,7 +45,6 @@ export function App() {
     <div className="app">
       <header className="app-header">
         <h1>DSLab</h1>
-        <p className="subtitle">Every step is computed by the C++ engine, running as WebAssembly in this page.</p>
       </header>
       {state.kind === 'loading' && <p className="loading" role="status">Loading the C++ engine (WebAssembly)…</p>}
       {state.kind === 'failed' && <EngineLoadErrorView error={state.error} />}
