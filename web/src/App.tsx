@@ -45,8 +45,8 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <ThemeToggle />
         <h1>DSLab</h1>
+        <ThemeToggle />
       </header>
       {state.kind === 'loading' && <p className="loading" role="status">Loading the C++ engine (WebAssembly)…</p>}
       {state.kind === 'failed' && <EngineLoadErrorView error={state.error} />}
