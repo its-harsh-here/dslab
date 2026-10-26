@@ -173,6 +173,7 @@ input[aria-invalid='true'] {
    marked like the current structure in the list below it. */
 .theme-toggle {
   display: inline-flex;
+  margin-left: auto;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
