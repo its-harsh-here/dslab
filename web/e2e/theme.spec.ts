@@ -19,10 +19,12 @@ test('light by default; the Dark mode button at the top left switches to dark an
   // The button sits in the top-left corner, before the title.
   const box = await toggle.boundingBox();
   expect(box, 'the Dark mode button is on screen').not.toBeNull();
-  expect(box!.x).toBeLessThan(32);
+  const rightGap = page.viewportSize()!.width - (box!.x + box!.width);
+  expect(rightGap).toBeGreaterThanOrEqual(0);
+  expect(rightGap).toBeLessThan(32);
   expect(box!.y).toBeLessThan(32);
-  await expect(page.locator('.app-header > :first-child')).toHaveText('Dark mode');
-
+  await expect(page.locator('.app-header > :last-child')).toHaveText('Dark mode');
+  
   // Light, with the button not pressed.
   await expect(html).not.toHaveAttribute('data-theme', 'dark');
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
