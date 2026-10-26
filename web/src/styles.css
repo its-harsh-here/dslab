@@ -1,6 +1,10 @@
 /* DSLab: plain, academic styling. One accent (blue) marks highlights,
    selection and focus. Red and black are used only for red-black nodes and
-   NIL leaves; warnings and errors use amber. */
+   NIL leaves; warnings and errors use amber.
+
+   Two themes. Light is the default, whatever the system setting. The
+   "Dark mode" button (web/src/ui/ThemeToggle.tsx) sets data-theme="dark" on
+   <html>, which swaps in the dark colours below. */
 
 :root {
   --bg: #ffffff;
@@ -22,30 +26,30 @@
   --rb-text: #ffffff;
   --nil-fill: #24292f;
   --code-current: #ddf4ff;
-  color-scheme: light dark;
+  /* Native parts (scrollbars, the range slider, select menus) follow the theme too. */
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --surface: #151b23;
-    --text: #e6edf3;
-    --muted: #9198a1;
-    --line: #6e7681;
-    --border: #3d444d;
-    --node-fill: #0d1117;
-    --node-stroke: #8b949e;
-    --accent: #4493f8;
-    --accent-fill: #12263d;
-    --accent-text: #0d1117;
-    --warn: #d29922;
-    --warn-strong: #e3b341;
-    --warn-fill: #2e2410;
-    --rb-red: #da3633;
-    --rb-black: #010409;
-    --nil-fill: #010409;
-    --code-current: #12263d;
-  }
+:root[data-theme='dark'] {
+  --bg: #0d1117;
+  --surface: #151b23;
+  --text: #e6edf3;
+  --muted: #9198a1;
+  --line: #6e7681;
+  --border: #3d444d;
+  --node-fill: #0d1117;
+  --node-stroke: #8b949e;
+  --accent: #4493f8;
+  --accent-fill: #12263d;
+  --accent-text: #0d1117;
+  --warn: #d29922;
+  --warn-strong: #e3b341;
+  --warn-fill: #2e2410;
+  --rb-red: #da3633;
+  --rb-black: #010409;
+  --nil-fill: #010409;
+  --code-current: #12263d;
+  color-scheme: dark;
 }
 
 * {
@@ -159,10 +163,31 @@ input[aria-invalid='true'] {
 .app-header {
   grid-area: header;
   display: flex;
-  align-items: baseline;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
+}
+
+/* The "Dark mode" switch, first in the header (top left). Pressed = dark is on,
+   marked like the current structure in the list below it. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+}
+
+.theme-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-fill);
+}
+
+.theme-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
 }
 
 .subtitle {

@@ -7,6 +7,15 @@
     <!-- web/public/: Vite serves these under the base path (/dslab/favicon.svg). -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- Light is the default theme. A visitor who chose dark with the "Dark mode"
+         button (web/src/ui/ThemeToggle.tsx) gets it back before anything is drawn. -->
+    <script>
+      try {
+        if (localStorage.getItem('dslab-theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+      } catch {
+        // Storage is blocked (some private windows): stay light.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

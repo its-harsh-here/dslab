@@ -1,7 +1,8 @@
-// Deployment smoke test. CI runs every test tagged @smoke (this one and the
-// seven in frames.spec.ts) against `npm run preview` before it deploys: the
-// page, its JavaScript, the .wasm engine and the tab icon must all load from
-// under /dslab/, the path GitHub Pages serves the site from.
+// Deployment smoke test. CI runs every test tagged @smoke (this one, the
+// seven in frames.spec.ts and the one in theme.spec.ts) against `npm run
+// preview` before it deploys: the page, its JavaScript, the .wasm engine and
+// the tab icon must all load from under /dslab/, the path GitHub Pages serves
+// the site from.
 import { expect, open, test } from './support';
 
 test('the page, its JavaScript, the .wasm file and the tab icon load under /dslab/', { tag: '@smoke' }, async ({ page }) => {

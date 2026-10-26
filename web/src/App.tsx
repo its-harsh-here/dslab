@@ -14,6 +14,7 @@ import type { Player } from './playback/player';
 import { createPlayers, type Players } from './playback/players';
 import type { StageCommands } from './ui/Stage';
 import { StructureNav } from './ui/StructureNav';
+import { ThemeToggle } from './ui/ThemeToggle';
 import { useKeyboardShortcuts } from './ui/useKeyboardShortcuts';
 
 type LoadState =
@@ -44,6 +45,7 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
+        <ThemeToggle />
         <h1>DSLab</h1>
       </header>
       {state.kind === 'loading' && <p className="loading" role="status">Loading the C++ engine (WebAssembly)…</p>}

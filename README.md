@@ -359,7 +359,9 @@ including the protocol errors, is in
 
 - **Phone and narrow windows** (below 900 px): the parts stack vertically, the Examples
   box starts closed, and nothing scrolls sideways (the tests check this at 390 px).
-- **Dark mode** follows your system setting.
+- **Light and dark:** the site opens in the light theme. The **Dark mode** button at
+  the top left switches to dark (press it again for light); your choice is remembered
+  in this browser for the next visit.
 - **Reduced motion:** with the system's reduced-motion setting on, nodes do not slide,
   but operations still play step by step.
 - **Screen readers and keyboard:**
