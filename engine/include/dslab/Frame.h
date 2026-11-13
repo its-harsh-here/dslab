@@ -39,6 +39,7 @@ struct Frame {
     std::vector<Value> output;    // traversals only (later milestones)
     std::vector<NodeId> pending;  // level-order traversal only (later milestones)
     Counters counters;            // the algorithm's work up to and including this step
+    int bucket = -1;              // hash table only: the bucket this step works in (-1: none)
     Snapshot snapshot;            // the whole structure right after this step
 };
 

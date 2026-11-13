@@ -187,6 +187,93 @@ const std::vector<StructureInfo>& structureTable() {
           {"redo", Operation::Redo, kNoArgs},
           {"export", Operation::Export, kNoArgs},
           {"import", Operation::Import, kTextArg}}},
+        {"deque", "deque", StructureKind::Deque,
+         {{"pushFront", Operation::PushFront, kValueArg},
+          {"pushBack", Operation::PushBack, kValueArg},
+          {"popFront", Operation::PopFront, kNoArgs},
+          {"popBack", Operation::PopBack, kNoArgs},
+          {"peekFront", Operation::PeekFront, kNoArgs},
+          {"peekBack", Operation::PeekBack, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"doublyList", "doubly linked list", StructureKind::DoublyList,
+         {{"insertAt", Operation::InsertAt, kIndexArg | kValueArg},
+          {"deleteNode", Operation::DeleteNode, kNodeIdArg},
+          {"search", Operation::Search, kValueArg},
+          {"reverse", Operation::Reverse, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"circularList", "circular list", StructureKind::CircularList,
+         {{"insertFront", Operation::InsertFront, kValueArg},
+          {"insertBack", Operation::InsertBack, kValueArg},
+          {"deleteNode", Operation::DeleteNode, kNodeIdArg},
+          {"search", Operation::Search, kValueArg},
+          {"rotate", Operation::Rotate, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"minHeap", "min-heap", StructureKind::MinHeap,
+         {{"insert", Operation::Insert, kValueArg},
+          {"extract", Operation::Extract, kNoArgs},
+          {"peek", Operation::Peek, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"maxHeap", "max-heap", StructureKind::MaxHeap,
+         {{"insert", Operation::Insert, kValueArg},
+          {"extract", Operation::Extract, kNoArgs},
+          {"peek", Operation::Peek, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"splay", "splay tree", StructureKind::Splay,
+         {{"insert", Operation::Insert, kValueArg},
+          {"delete", Operation::Delete, kValueArg},
+          {"search", Operation::Search, kValueArg},
+          {"preorder", Operation::Preorder, kNoArgs},
+          {"inorder", Operation::Inorder, kNoArgs},
+          {"postorder", Operation::Postorder, kNoArgs},
+          {"levelorder", Operation::Levelorder, kNoArgs},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
+        {"hashTable", "hash table", StructureKind::HashTable,
+         {{"insert", Operation::Insert, kValueArg},
+          {"delete", Operation::Delete, kValueArg},
+          {"search", Operation::Search, kValueArg},
+          {"clear", Operation::Clear, kNoArgs},
+          {"snapshot", Operation::Snapshot, kNoArgs},
+          {"catalog", Operation::Catalog, kNoArgs},
+          {"undo", Operation::Undo, kNoArgs},
+          {"redo", Operation::Redo, kNoArgs},
+          {"export", Operation::Export, kNoArgs},
+          {"import", Operation::Import, kTextArg}}},
     };
     return table;
 }
@@ -249,6 +336,8 @@ const char* eventName(Event event) {
         case Event::Rotate: return "rotate";
         case Event::Recolor: return "recolor";
         case Event::Balanced: return "balanced";
+        case Event::Swap: return "swap";
+        case Event::Hash: return "hash";
         case Event::Restore: return "restore";
         case Event::Reject: return "reject";
         case Event::Done: return "done";
@@ -413,6 +502,10 @@ std::vector<std::string> entryNames(StructureKind structure) {
         case StructureKind::Stack: return {"top"};
         case StructureKind::Queue: return {"front", "rear"};
         case StructureKind::List: return {"head"};
+        case StructureKind::Deque: return {"front", "rear"};
+        case StructureKind::DoublyList: return {"head", "tail"};
+        case StructureKind::CircularList: return {"tail"};
+        case StructureKind::HashTable: return {};  // its entry is the "buckets" array
         default: return {"root"};
     }
 }
@@ -426,6 +519,8 @@ std::string decodeNode(const Json& node, std::size_t position, StructureKind str
     const std::string owner = (id != nullptr && fitsInt32(*id)) ? "Node " + compact(*id)
                                                                 : "Node number " + std::to_string(position + 1);
     std::vector<std::string> fields = {"id", "value"};
+    if (hasPrev(structure)) fields.push_back("prev");
+    if (isHeap(structure)) fields.push_back("index");
     if (isLinear(structure)) {
         fields.push_back("next");
     } else {
@@ -440,11 +535,12 @@ std::string decodeNode(const Json& node, std::size_t position, StructureKind str
     view.id = id->get<std::int32_t>();
     if (!fitsInt32(*member(node, "value"))) return owner + "'s value must be a 32-bit integer.";
     view.value = member(node, "value")->get<std::int32_t>();
-    for (const std::string name : {"next", "left", "right", "parent"}) {
+    for (const std::string name : {"prev", "next", "left", "right", "parent"}) {
         const Json* link = member(node, name.c_str());
         if (link == nullptr) continue;
         NodeId target = kNoNode;
         if (!readLink(*link, target)) return owner + "'s " + name + " must be null or a node ID from 1 to 2147483647.";
+        if (name == "prev") view.prev = target;
         if (name == "next") view.next = target;
         if (name == "left") view.left = target;
         if (name == "right") view.right = target;
@@ -456,6 +552,11 @@ std::string decodeNode(const Json& node, std::size_t position, StructureKind str
         }
         view.height = member(node, "height")->get<std::int32_t>();
         view.balance = member(node, "balance")->get<std::int32_t>();
+    }
+    if (isHeap(structure)) {
+        const Json& slot = *member(node, "index");
+        if (!fitsInt32(slot) || slot.get<std::int64_t>() < 0) return owner + "'s index must be a whole number from 0.";
+        view.index = slot.get<std::int32_t>();
     }
     if (structure == StructureKind::RedBlack && !readColor(*member(node, "color"), view.color)) {
         return owner + "'s color must be \"red\" or \"black\".";
@@ -497,6 +598,7 @@ std::string decodeExport(const std::string& text, StructureKind structure, Snaps
     std::vector<std::string> fields = {"structure", "size"};
     for (const std::string& entry : entryNames(structure)) fields.push_back(entry);
     if (structure == StructureKind::RedBlack) fields.push_back("nilColor");
+    if (structure == StructureKind::HashTable) fields.push_back("buckets");
     fields.push_back("nodes");
     problem = exactFields(snapshot, fields, "The snapshot");
     if (!problem.empty()) return problem;
@@ -516,6 +618,18 @@ std::string decodeExport(const std::string& text, StructureKind structure, Snaps
         if (entry == "rear") out.rear = target;
         if (entry == "head") out.head = target;
         if (entry == "root") out.root = target;
+        if (entry == "tail") out.tail = target;
+    }
+    if (structure == StructureKind::HashTable) {
+        const Json& buckets = *member(snapshot, "buckets");
+        if (!buckets.is_array() || buckets.size() != static_cast<std::size_t>(kHashBuckets)) {
+            return "\"buckets\" must be a list of exactly " + std::to_string(kHashBuckets) + " entries.";
+        }
+        for (const Json& bucket : buckets) {
+            NodeId target = kNoNode;
+            if (!readLink(bucket, target)) return "Every bucket must be null or a node ID from 1 to 2147483647.";
+            out.buckets.push_back(target);
+        }
     }
     if (structure == StructureKind::RedBlack && !readColor(*member(snapshot, "nilColor"), out.nilColor)) {
         return "nilColor must be \"red\" or \"black\".";
@@ -691,6 +805,12 @@ Json snapshotJson(const Snapshot& snapshot) {
         Json item = Json::object();
         item["id"] = node.id;
         item["value"] = node.value;
+        if (hasPrev(snapshot.structure)) {
+            item["prev"] = nodeOrNull(node.prev);
+        }
+        if (isHeap(snapshot.structure)) {
+            item["index"] = node.index;
+        }
         if (linear) {
             item["next"] = nodeOrNull(node.next);
         } else {
@@ -725,8 +845,30 @@ Json snapshotJson(const Snapshot& snapshot) {
         case StructureKind::BinaryTree:
         case StructureKind::Bst:
         case StructureKind::Avl:
+        case StructureKind::MinHeap:
+        case StructureKind::MaxHeap:
+        case StructureKind::Splay:
             json["root"] = nodeOrNull(snapshot.root);
             break;
+        case StructureKind::Deque:
+            json["front"] = nodeOrNull(snapshot.front);
+            json["rear"] = nodeOrNull(snapshot.rear);
+            break;
+        case StructureKind::DoublyList:
+            json["head"] = nodeOrNull(snapshot.head);
+            json["tail"] = nodeOrNull(snapshot.tail);
+            break;
+        case StructureKind::CircularList:
+            json["tail"] = nodeOrNull(snapshot.tail);
+            break;
+        case StructureKind::HashTable: {
+            Json buckets = Json::array();
+            for (const NodeId first : snapshot.buckets) {
+                buckets.push_back(nodeOrNull(first));
+            }
+            json["buckets"] = std::move(buckets);
+            break;
+        }
         case StructureKind::RedBlack:
             json["root"] = nodeOrNull(snapshot.root);
             json["nilColor"] = colorName(snapshot.nilColor);
@@ -773,6 +915,10 @@ Json frameJson(const Frame& frame) {
     json["pointers"] = std::move(pointers);
     json["output"] = frame.output;
     json["pending"] = frame.pending;
+    if (frame.snapshot.structure == StructureKind::HashTable) {
+        // Hash table frames only: the bucket this step works in, or null.
+        json["bucket"] = frame.bucket < 0 ? Json(nullptr) : Json(frame.bucket);
+    }
     json["counters"] = countersJson(frame.counters);
     json["snapshot"] = snapshotJson(frame.snapshot);
     return json;
@@ -818,7 +964,7 @@ Json catalogJson(StructureKind structure) {
         Json item = Json::object();
         item["operation"] = info.name;
         item["args"] = argNames(info.args);
-        item["mutates"] = isMutating(info.operation);
+        item["mutates"] = isMutating(structure, info.operation);
         item["complexity"] = listing->complexity;
         item["pseudocode"] = std::move(lines);
         operations.push_back(std::move(item));

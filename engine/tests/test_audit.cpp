@@ -15,6 +15,7 @@
 #include <nlohmann/json.hpp>
 
 #include "dslab/Engine.h"
+#include "dslab/Limits.h"
 #include "dslab/json/Protocol.h"
 #include "support/Checkers.h"
 #include "support/Run.h"
@@ -26,7 +27,10 @@ namespace {
 
 const std::vector<StructureKind> kAll = {StructureKind::Stack, StructureKind::Queue, StructureKind::List,
                                          StructureKind::BinaryTree, StructureKind::Bst, StructureKind::Avl,
-                                         StructureKind::RedBlack};
+                                         StructureKind::RedBlack,   StructureKind::Deque,
+                                         StructureKind::DoublyList, StructureKind::CircularList,
+                                         StructureKind::MinHeap,    StructureKind::MaxHeap,
+                                         StructureKind::Splay,      StructureKind::HashTable};
 
 Request request(StructureKind structure, Operation operation, Value value = 0) {
     Request r;
@@ -43,6 +47,9 @@ Request add(StructureKind structure, Value value) {
         case StructureKind::Queue: return request(structure, Operation::Enqueue, value);
         case StructureKind::List: return request(structure, Operation::InsertAt, value);  // index 0
         case StructureKind::BinaryTree: return request(structure, Operation::AddRoot, value);
+        case StructureKind::Deque: return request(structure, Operation::PushBack, value);
+        case StructureKind::DoublyList: return request(structure, Operation::InsertAt, value);  // index 0
+        case StructureKind::CircularList: return request(structure, Operation::InsertBack, value);
         default: return request(structure, Operation::Insert, value);
     }
 }
@@ -104,6 +111,19 @@ TEST_CASE("audit: invalid input of every kind changes nothing") {
         {"avl", {R"("operation":"delete","args":{"value":12345})", R"("operation":"rotate","args":{})"}},
         {"redBlack", {R"("operation":"delete","args":{"value":12345})", R"("operation":"import","args":{"text":"{"})",
                       R"("operation":"import","args":{"text":5})"}},
+        {"deque", {R"("operation":"pushFront","args":{})", R"("operation":"pushBack","args":{"value":2147483648})",
+                   R"("operation":"popFront","args":{"value":1})", R"("operation":"enqueue","args":{"value":1})"}},
+        {"doublyList", {R"("operation":"insertAt","args":{"index":5,"value":1})", R"("operation":"insertAt","args":{"index":-1,"value":1})",
+                        R"("operation":"deleteNode","args":{"nodeId":999})", R"("operation":"insertAt","args":{"value":1})"}},
+        {"circularList", {R"("operation":"deleteNode","args":{"nodeId":999})", R"("operation":"insertFront","args":{"value":"x"})",
+                          R"("operation":"rotate","args":{"value":1})"}},
+        {"minHeap", {R"("operation":"insert","args":{"value":1.5})", R"("operation":"extract","args":{"value":1})",
+                     R"("operation":"delete","args":{"value":40})"}},
+        {"maxHeap", {R"("operation":"insert","args":{})", R"("operation":"pop","args":{})"}},
+        {"splay", {R"("operation":"delete","args":{"value":12345})", R"("operation":"insert","args":{"value":40})",
+                   R"("operation":"insert","args":{"value":null})"}},
+        {"hashTable", {R"("operation":"delete","args":{"value":12345})", R"("operation":"insert","args":{"value":40})",
+                       R"("operation":"search","args":{})", R"("operation":"inorder","args":{})"}},
     };
     const std::vector<std::string> everywhere = {
         R"("operation":"redo","args":{})",
@@ -155,7 +175,19 @@ TEST_CASE("audit: errors on an empty structure change nothing") {
              {StructureKind::Queue, Operation::Front, ErrorCode::EmptyStructure},
              {StructureKind::Bst, Operation::Delete, ErrorCode::ValueNotFound},
              {StructureKind::Avl, Operation::Undo, ErrorCode::NothingToUndo},
-             {StructureKind::RedBlack, Operation::Redo, ErrorCode::NothingToRedo}}) {
+             {StructureKind::RedBlack, Operation::Redo, ErrorCode::NothingToRedo},
+             {StructureKind::Deque, Operation::PopFront, ErrorCode::EmptyStructure},
+             {StructureKind::Deque, Operation::PopBack, ErrorCode::EmptyStructure},
+             {StructureKind::Deque, Operation::PeekFront, ErrorCode::EmptyStructure},
+             {StructureKind::Deque, Operation::PeekBack, ErrorCode::EmptyStructure},
+             {StructureKind::DoublyList, Operation::DeleteNode, ErrorCode::NodeNotFound},
+             {StructureKind::CircularList, Operation::DeleteNode, ErrorCode::NodeNotFound},
+             {StructureKind::MinHeap, Operation::Extract, ErrorCode::EmptyStructure},
+             {StructureKind::MinHeap, Operation::Peek, ErrorCode::EmptyStructure},
+             {StructureKind::MaxHeap, Operation::Extract, ErrorCode::EmptyStructure},
+             {StructureKind::MaxHeap, Operation::Peek, ErrorCode::EmptyStructure},
+             {StructureKind::Splay, Operation::Delete, ErrorCode::ValueNotFound},
+             {StructureKind::HashTable, Operation::Delete, ErrorCode::ValueNotFound}}) {
         CAPTURE(test::wireName(structure));
         test::checkRejected(engine, request(structure, operation), code);  // state, counter and history unchanged
         CHECK(engine.snapshot(structure).nextId == 1);
@@ -171,6 +203,7 @@ TEST_CASE("audit: when node IDs run out, every node-creating operation is reject
         full.structure = structure;
         full.nextId = 2147483648LL;
         full.nilColor = structure == StructureKind::RedBlack ? Color::Black : Color::None;
+        if (structure == StructureKind::HashTable) full.buckets.assign(kHashBuckets, kNoNode);
         if (structure == StructureKind::BinaryTree) {
             // A root, so that addChild has a parent.
             NodeView root;
@@ -249,7 +282,7 @@ TEST_CASE("audit: no generated sentence has a wording slip") {
         Request r = kind < 6   ? add(structure, static_cast<Value>(random() % 40))
                     : kind < 7 ? request(structure, Operation::Undo)
                     : kind < 8 ? request(structure, Operation::Clear)
-                    : structure == StructureKind::Stack || structure == StructureKind::Queue || structure == StructureKind::List
+                    : isLinear(structure) || isHeap(structure)  // these have no traversals
                         ? request(structure, Operation::Export)
                         : request(structure, random() % 2 == 0 ? Operation::Levelorder : Operation::Inorder);
         if (structure == StructureKind::BinaryTree && kind < 6 && engine.snapshot(structure).size > 0) {

@@ -22,13 +22,19 @@ endif()
 add_library(dslab_engine STATIC
   engine/src/AvlTree.cpp
   engine/src/Catalog.cpp
+  engine/src/BinaryHeap.cpp
   engine/src/BinaryTree.cpp
   engine/src/Bst.cpp
+  engine/src/CircularList.cpp
+  engine/src/Deque.cpp
+  engine/src/DoublyList.cpp
+  engine/src/HashTable.cpp
   engine/src/Engine.cpp
   engine/src/History.cpp
   engine/src/Queue.cpp
   engine/src/RedBlackTree.cpp
   engine/src/SinglyLinkedList.cpp
+  engine/src/SplayTree.cpp
   engine/src/Stack.cpp
   engine/src/Trace.cpp
   engine/src/Validate.cpp
@@ -66,6 +72,7 @@ else()
     engine/tests/test_import.cpp
     engine/tests/test_bst.cpp
     engine/tests/test_list.cpp
+    engine/tests/test_new_structures.cpp
     engine/tests/test_protocol.cpp
     engine/tests/test_queue.cpp
     engine/tests/test_random.cpp
