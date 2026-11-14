@@ -10,7 +10,8 @@ to SVG. Read it together with:
 - [toolchain.md](toolchain.md): pinned tool versions;
 - [complexity.md](complexity.md): time complexity, with tracing and rendering cost apart;
 - [memory.md](memory.md): node ownership and memory management;
-- [trace-playback.md](trace-playback.md): frames, playback, undo/redo.
+- [trace-playback.md](trace-playback.md): frames, playback, undo/redo;
+- [new-structures.md](new-structures.md): the seven structures added in milestone 10.
 
 If code and this document disagree, fix one of them in the same change. Do not leave
 them out of step.
@@ -59,7 +60,7 @@ an outcome; it only lays out, plays back, draws and collects input.
 
 | Group | Files | What they hold |
 | --- | --- | --- |
-| **C++ algorithms** (the teaching structures) | `engine/src/Stack.cpp`, `Queue.cpp`, `SinglyLinkedList.cpp`, `BinaryTree.cpp`, `Bst.cpp`, `AvlTree.cpp`, `RedBlackTree.cpp` with their headers in `engine/include/dslab/`; `engine/include/dslab/TreeTraversal.h` | push/pop, enqueue/dequeue, list insert/delete/search/reverse, tree add/delete-subtree, BST/AVL/red-black insert, delete, search, rotations, fix-ups, and the four traversals. Every frame is recorded here, inside the running algorithm |
+| **C++ algorithms** (the teaching structures) | `engine/src/Stack.cpp`, `Queue.cpp`, `SinglyLinkedList.cpp`, `BinaryTree.cpp`, `Bst.cpp`, `AvlTree.cpp`, `RedBlackTree.cpp`, and since milestone 10 `Deque.cpp`, `DoublyList.cpp`, `CircularList.cpp`, `BinaryHeap.cpp` (min-heap and max-heap), `SplayTree.cpp`, `HashTable.cpp`, with their headers in `engine/include/dslab/`; `engine/include/dslab/TreeTraversal.h` | push/pop, enqueue/dequeue, list insert/delete/search/reverse, tree add/delete-subtree, BST/AVL/red-black insert, delete, search, rotations, fix-ups, and the four traversals. Every frame is recorded here, inside the running algorithm |
 | C++ engine support (no data-structure algorithm) | `engine/include/dslab/NodePool.h`, `Trace.h`/`Trace.cpp`, `Frame.h`, `Counters.h`, `Snapshot.h`, `Limits.h`, `Types.h`, `Result.h`, `Request.h`, `Response.h`, `History.h`/`History.cpp`, `Validate.h`/`Validate.cpp`, `Catalog.h`/`Catalog.cpp`, `Engine.h`/`Engine.cpp` | node ownership, frame recording, undo/redo history, import validation, the pseudocode catalog, dispatch |
 | C++ boundary | `engine/src/json/Protocol.cpp` (+ `include/dslab/json/Protocol.h`), `engine/bindings/wasm_bindings.cpp`, `engine/tools/dslab_cli.cpp` | JSON in and out (the only code that uses nlohmann/json), the Embind class, the native command runner for tests |
 | **Browser presentation** (TypeScript, React, SVG) | `web/src/App.tsx`, `main.tsx`; `web/src/ui/*`; `web/src/panels/*`; `web/src/render/*`; `web/src/layout/*`; `web/src/playback/*`; `web/src/engine/*` (loading the Wasm file, sending JSON); `web/src/styles.css` | layout (x, y from links), playback timing, SVG drawing, panels, input forms, keyboard shortcuts. `ui/random.ts` and `panels/examples.ts` only produce **input values** for examples; every insert still runs in C++ |
@@ -93,7 +94,7 @@ The file list is the plan for milestone 2 onward; update it when files change.
 
 **Status (unchanged since milestone 7):** `Limits`, `Types`, `Result`, `Snapshot`, `Frame`,
 `Counters`, `Trace`, `NodePool`, `History`, `Validate`, `Catalog`, `Request`,
-`Response`, `Engine`, `TreeTraversal` and all seven structures (`Stack`, `Queue`,
+`Response`, `Engine`, `TreeTraversal` and the first seven structures (`Stack`, `Queue`,
 `SinglyLinkedList`, `BinaryTree`, `Bst`, `AvlTree`, `RedBlackTree`) exist. `AvlTree` is
 the BST's code plus heights, `fixUp`, `rebalance` and CLRS rotations (design:
 [avl.md](avl.md)). `RedBlackTree` is CLRS chapter 13 with one black NIL sentinel owned by
@@ -101,6 +102,15 @@ the tree as a member (design: [red-black.md](red-black.md)); `TreeTraversal` is 
 NIL is (nullptr, or that sentinel). The enums list only what is used so far.
 `Engine::apply` takes the snapshot for history, then dispatches with one
 `run<Structure>()` function per structure.
+
+**Milestone 10** added `Deque`, `DoublyList`, `CircularList`, `BinaryHeap`, `SplayTree`
+and `HashTable` (design: [new-structures.md](new-structures.md)). The engine holds
+fourteen structures: `BinaryHeap` is one class with two objects, the min-heap and the
+max-heap, served by one `runHeap()`. `Snapshot` gained `prev`, `index`, `tail` and
+`buckets`; `Frame` and `Trace` gained `bucket` (hash table only); `Types.h` gained the
+helpers `hasPrev`, `isHeap` and `isSearchTree` and the events `Swap` and `Hash`;
+`Request.h` gained `isMutating(structure, operation)`, because a splay tree's search
+changes the tree.
 
 Every structure class has the same shape:
 
@@ -183,13 +193,14 @@ React 19, TypeScript, Vite 8. `web/index.html` is the Vite root page.
 
 | Folder | Responsibility |
 | --- | --- |
-| `web/src/main.tsx`, `App.tsx` | Mount the app in `<StrictMode>`; loading, load-error and ready states; the structure selector (`#queue` etc. in the URL selects one); creates the seven players once; one keyboard listener for the structure on screen. Only that structure's page is rendered; leaving a structure cancels its playback. |
+| `web/src/main.tsx`, `App.tsx` | Mount the app in `<StrictMode>`; loading, load-error and ready states; the structure selector (`#queue` etc. in the URL selects one; no name shows the overview page, `ui/Home.tsx`); creates the fourteen players once; one keyboard listener for the structure on screen. Only that structure's page is rendered; leaving a structure cancels its playback. |
 | `web/src/engine/` | `loadEngine.ts` (loads Wasm once; section 4), `client.ts` (`send(...) → EngineResponse`, stringify/parse, schema-version check), `protocol.ts` (hand-written read-only TypeScript types that mirror operation-contract.md). |
 | `web/src/generated/` | Emscripten output: `dslab_engine.mjs`, `dslab_engine.wasm`, `dslab_engine.d.mts`. Build output: gitignored, never edited, never committed. |
 | `web/src/state/` | Not created: each structure's state lives in its player. |
 | `web/src/playback/` | `player.ts`: one `Player` per structure, outside React (read through `useSyncExternalStore` in `usePlayer.ts`). It keeps the authoritative snapshot (`latest`) apart from the frame on screen, owns the only `requestAnimationFrame` loop (600 ms per frame at 1×, nodes move in the first 360 ms, no movement under reduced motion), sends batch steps one at a time in order, and keeps the operation history. `animation.ts`: one response's frames laid out, sampled at a frame index plus movement progress. `players.ts` creates the seven players. |
-| `web/src/layout/` | `layout.ts`: the layout rule of section 3.2, interpolation, the viewBox, and the "focus" box around the nodes an operation highlights. `linear.ts`: stack, queue and list strategies. `tree.ts`: every tree (x = in-order rank, y = depth), with extra room below for red-black NIL leaves. |
-| `web/src/render/` | `parts.tsx` (per-drawing arrow markers, box nodes, selectable nodes, pointer labels), `StackSvg.tsx`, `ChainSvg.tsx` (queue and list: FRONT/REAR, HEAD/TAIL, index labels), `TreeSvg.tsx` (L/R edge labels, ROOT marker, AVL height/balance labels, red-black fills with R/B badges and optional NIL leaves). Nodes are keyed by node ID (`data-node-id`), edges by edge ID; nodes not reachable from the entry pointer are dashed. |
+| `web/src/ui/structures.tsx`, `ui/Home.tsx`, `ui/StructureNav.tsx` | Names, groups, one-line descriptions and icons of the structures; the overview page (a card per structure, with a decorative CSS loop); the grouped selector. Presentation only. |
+| `web/src/layout/` | `layout.ts`: the layout rule of section 3.2, interpolation, the viewBox, and the "focus" box around the nodes an operation highlights. `linear.ts`: stack, queue and list strategies, and the deque, doubly linked list, circular list (a ring) and hash table (buckets down the left, chains to the right). `tree.ts`: every tree (x = in-order rank, y = depth), with extra room below for red-black NIL leaves or for a heap's array. |
+| `web/src/render/` | `parts.tsx` (per-drawing arrow markers, box nodes, selectable nodes, pointer labels), `StackSvg.tsx`, `ChainSvg.tsx` (queue and list: FRONT/REAR, HEAD/TAIL, index labels), `RingSvg.tsx` (circular list), `HashSvg.tsx` (hash table; lights `frame.bucket`), `TreeSvg.tsx` (heap slot labels and the heap's array; L/R edge labels, ROOT marker, AVL height/balance labels, red-black fills with R/B badges and optional NIL leaves). Nodes are keyed by node ID (`data-node-id`), edges by edge ID; nodes not reachable from the entry pointer are dashed. |
 | `web/src/panels/` | One page per structure, defining only its controls, examples and drawing (`SearchTreePanel.tsx` is shared by the BST, AVL and red-black pages, which add their presets; red-black adds the "Show NIL leaves" toggle), `examples.ts` (set-up and random input), `common.tsx` (integer input), `TraversalButtons.tsx`, `EngineLoadErrorView.tsx`. Selection is always by node ID. |
 | `web/src/ui/` | The shared workspace: `Workspace.tsx` (the layout), `OperationBar.tsx` (Undo, Redo, Export, Import and Reset; status line with Jump to result; examples: batch, seeded random, presets; `OpButton` is disabled while busy; Export saves C++'s text as a file, Import sends a file's text unread), `Stage.tsx` (pan, zoom, fit; readable automatic view), `PlayerBar.tsx`, `SidePanels.tsx` (explanation, pseudocode, node properties, cost, text view), `HistoryLog.tsx`, `StructureNav.tsx`, `useKeyboardShortcuts.ts`, `describe.ts`, `random.ts` (seeded generator for input values only). |
 | `web/e2e/` | The Playwright suite (`npm run test:e2e`, section 7). `support.ts` fails any test on a console error or a failed `.wasm` request and compares the screen with frames; the frames come from `window.__dslab.createEngine()`, a test hook in `loadEngine.ts` that creates a separate C++ engine from the same Wasm module (it never touches the page's own engine). |
@@ -234,8 +245,8 @@ memory, so the snapshot design wins. (It was already decision D23 of the contrac
 
 **The bound: 50 entries per structure, undo and redo together** (`kMaxHistory`). A new
 change beyond 50 drops the oldest undo entry. Undo and redo only move entries between the
-two lists, so together they never exceed 50. Worst case: 7 structures × 50 × 200 nodes =
-70,000 node copies of about 40 bytes each, under 3 MB. Fifty steps is far more than a
+two lists, so together they never exceed 50. Worst case: 14 structures × 50 × 200 nodes =
+140,000 node copies of about 48 bytes each, under 7 MB. Fifty steps is far more than a
 teaching session undoes, and the bound keeps memory fixed however long the page stays
 open.
 
@@ -436,7 +447,7 @@ Memory bounds (exact numbers in operation-contract.md, "Limits"):
   9 integers, about 36 bytes, so about 3.7 MB natively; at most about 8 MB of JSON, about
   6.5 MB for the worst real operation, a traversal of a 200-node red-black tree);
 - each structure keeps at most 50 history snapshots (undo and redo together) of at most
-  200 nodes. All seven structures together hold at most 70,000 node views (under 3 MB);
+  200 nodes. All fourteen structures together hold at most 140,000 node views (under 7 MB);
 - TypeScript keeps only the latest response per structure. Older frames are dropped.
 
 ---
@@ -475,7 +486,7 @@ Memory bounds (exact numbers in operation-contract.md, "Limits"):
 | Undo/redo and import | `test_history.cpp`, `test_import.cpp`, `engine/tests/fixtures/` | Section 2.9 and contract 5.7. |
 | Golden protocol tests | `engine/tests/golden/*.json` | Exact request text produces the exact response (compared as ordered JSON, ignoring whitespace). The two worked examples in operation-contract.md are golden files. |
 | Sanitizers | `npm run test:cpp:asan` | All of the above under ASan + UBSan (section 4). |
-| Native versus Wasm | `web/e2e/parity.spec.ts`, `web/e2e/fixtures/parity-commands.jsonl` (written by `scripts/make-parity-commands.py`) | The same 1,298 requests (every structure and operation, invalid input, the C++ import fixtures, undo/redo, a 200-node red-black traversal, a degenerate 200-node BST that recurses 200 deep) through `dslab_cli` and through the Wasm engine of the production build: every normalized response is equal. Invalid requests leave every structure unchanged; 300 Wasm engines are created and destroyed. |
+| Native versus Wasm | `web/e2e/parity.spec.ts`, `web/e2e/fixtures/parity-commands.jsonl` (written by `scripts/make-parity-commands.py`) | The same 2,653 requests (every structure and operation, invalid input, the C++ import fixtures, undo/redo, a 200-node red-black traversal, a degenerate 200-node BST that recurses 200 deep) through `dslab_cli` and through the Wasm engine of the production build: every normalized response is equal. Invalid requests leave every structure unchanged; 300 Wasm engines are created and destroyed. |
 | End-to-end | `web/e2e/*.spec.ts` | Real clicks and keys on the production build (`npm run preview`) in bundled Chromium: every step on screen matches its frame (nodes, values, IDs, colors, AVL labels, edges drawn between the drawn nodes, highlights, pointers, explanation, step line, traversal output, pseudocode line) for all seven structures; pause/resume, rapid clicking, scrubbing, keyboard, batch, random examples, reset and structure switching during playback, undo/redo, export/import and invalid import, reduced motion, pan/zoom, the phone layout. Any console error or failed `.wasm` request fails the test. |
 
 ## 8. Versioning
@@ -505,7 +516,7 @@ dslab/
 ├── CMakePresets.json             native, asan, wasm presets               (milestone 2)
 ├── engine/
 │   ├── include/dslab/            public headers: Limits, Types, Result, Snapshot, Frame,
-│   │                             Trace, NodePool, the seven structures, TreeTraversal,
+│   │                             Trace, NodePool, the fourteen structures, TreeTraversal,
 │   │                             History, Catalog, Request, Response, Engine
 │   ├── src/                      .cpp for the above
 │   │   └── json/                 protocol + JSON conversions (only place using nlohmann)

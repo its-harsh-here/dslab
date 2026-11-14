@@ -112,7 +112,7 @@ stays O(log n): compare the comparison counts.
 How we know it is correct: 106 native C++ test cases with an independent invariant
 checker after every operation, random sequences compared with the standard library,
 the same tests under AddressSanitizer, a browser test suite that checks every step on
-screen against its frame, and a check that the WebAssembly build answers 1,298 requests
+screen against its frame, and a check that the WebAssembly build answers 2,653 requests
 exactly like the native build. GitHub Actions runs the tests on every push and deploys
 this site only if they pass."
 

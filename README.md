@@ -4,12 +4,26 @@
 
 **Live site: https://its-harsh-here.github.io/dslab/**
 
-DSLab teaches seven data structures by showing every step of every operation. The
+DSLab teaches fourteen data structures by showing every step of every operation. The
 structures and algorithms are written in C++17. The same C++ code is compiled natively
 for the tests and to WebAssembly for the browser, where React draws each step with SVG.
 Every frame you see was recorded **inside the running C++ algorithm**. There is no
 JavaScript copy of any algorithm and no server: the whole simulator runs in your browser
 tab.
+
+![DSLab's overview page: a heading, and one animated card for each of the fourteen structures](docs/screenshots/m10-overview.png)
+
+*The overview page. Every card opens a structure; the list on the left is always there.*
+
+| | |
+| --- | --- |
+| ![A hash table: seven buckets, bucket 1 lit, a new node about to be linked at the head of its chain](docs/screenshots/m10-hash-table.png) | ![A min-heap drawn as a tree with the same values in an array underneath](docs/screenshots/m10-min-heap.png) |
+| *Hash table: the bucket a step works in is lit.* | *Min-heap: one snapshot, drawn as a tree and as its array.* |
+| ![A circular list drawn as a ring of six nodes](docs/screenshots/m10-circular-list.png) | ![An AVL tree in dark mode](docs/screenshots/m10-avl-dark.png) |
+| *Circular list: a ring, with only `tail` stored.* | *Dark mode.* |
+
+The screenshots further down were taken before the milestone 10 redesign: what they show
+is unchanged, but the styling in them is the older, plainer one.
 
 ![DSLab: a red-black tree paused in delete fix-up case 4, with the pseudocode line, the selected node's properties and the operation counters](docs/screenshots/readme-red-black-delete.png)
 
@@ -21,7 +35,7 @@ counted so far.*
 ## Contents
 
 - [Highlights](#highlights)
-- [The seven structures](#the-seven-structures)
+- [The fourteen structures](#the-fourteen-structures)
 - [Watching an operation](#watching-an-operation)
 - [Reading the drawing](#reading-the-drawing)
 - [Playback and keyboard](#playback-and-keyboard)
@@ -39,9 +53,14 @@ counted so far.*
 
 ## Highlights
 
-- **Seven structures**, each implemented by hand in C++ with linked nodes: stack, queue,
-  singly linked list, ordinary binary tree, binary search tree (BST), AVL tree and
-  red-black tree. No `std::stack`, `std::queue`, `std::list`, `std::set` or `std::map`.
+- **Fourteen structures**, each implemented by hand in C++: stack, queue, deque, singly
+  linked list, doubly linked list, circular list, ordinary binary tree, binary search
+  tree (BST), AVL tree, red-black tree, splay tree, min-heap, max-heap and hash table.
+  No `std::stack`, `std::queue`, `std::deque`, `std::list`, `std::set`, `std::map`,
+  `std::priority_queue` or `std::unordered_set`.
+- **An overview page** with a card for every structure, and an animated interface: new
+  nodes pop in, the node a step touches pulses, links in use flow towards their arrow,
+  and each step is labelled with what it does (compare, link, rotate, swap, hash…).
 - **Every step is a real frame.** A frame holds the whole structure, the highlighted
   nodes and edges, the algorithm's pointer variables, an event type, a one-sentence
   explanation written in C++, and the ID of the pseudocode line being executed.
@@ -62,16 +81,18 @@ counted so far.*
 - **Pan, zoom and fit**, a **text view** of every step, an **operation history**, full
   **keyboard control**, **reduced motion**, **dark mode** and a **phone layout**.
 - **Thoroughly tested:**
-  - 106 native C++ test cases, with an independent invariant checker after every
+  - 140 native C++ test cases, with an independent invariant checker after every
     operation;
   - the same suite under AddressSanitizer and UBSan;
-  - 27 browser tests that compare the screen with C++'s frames;
-  - 1,298 requests answered identically by the native and the WebAssembly builds.
+  - 37 browser tests that compare the screen with C++'s frames;
+  - 2,653 requests answered identically by the native and the WebAssembly builds.
 
-## The seven structures
+## The fourteen structures
 
-Choose a structure in the list on the left, or open the site with `#stack`, `#queue`,
-`#list`, `#binaryTree`, `#bst`, `#avl` or `#redBlack` at the end of the URL. Each
+The site opens on an overview with one card per structure. Choose a structure there or
+in the list on the left, or open the site with its name at the end of the URL: `#stack`,
+`#queue`, `#deque`, `#list`, `#doublyList`, `#circularList`, `#binaryTree`, `#bst`,
+`#avl`, `#redBlack`, `#splay`, `#minHeap`, `#maxHeap` or `#hashTable`. Each
 structure keeps its own state, history and undo list while you look at another one.
 Values are 32-bit signed integers, and each structure holds at most 200 nodes.
 
@@ -173,13 +194,85 @@ Frames in which a property is broken for a moment, during a fix-up, say so: "tem
 violation: black heights differ under 40." The full design is in
 [docs/red-black.md](docs/red-black.md); the AVL design is in [docs/avl.md](docs/avl.md).
 
+### Deque (doubly linked nodes, `front` and `rear`)
+
+| Operation | Button | Time | What you see |
+| --- | --- | --- | --- |
+| pushFront(value), pushBack(value) | **Push front**, **Push back** | O(1) | the new node and the old end are linked to each other in both directions, then the end pointer moves |
+| popFront(), popBack() | **Pop front**, **Pop back** | O(1) | the end pointer moves to the neighbour, whose link back is set to NIL; the old end is freed |
+| peekFront(), peekBack() | **Peek front**, **Peek back** | O(1) | the value at that end is read |
+| clear() | **Clear** | O(n) | every node is freed |
+
+Upper arrows are `next`, lower dotted arrows are `prev`. Because the rear node knows its
+`prev`, popping at the rear is O(1); a singly linked queue would have to walk there.
+
+### Doubly linked list (`head` and `tail`)
+
+| Operation | Button | Time | What you see |
+| --- | --- | --- | --- |
+| insertAt(index, value) | **Insert at index** | O(min(i, n − i)) | the walk starts at whichever end is nearer, using `next` from the head or `prev` from the tail |
+| deleteNode(id) | **Delete selected** | **O(1)** | no walk: the node's own `prev` and `next` lead to its neighbours, which are linked past it |
+| search(value) | **Search value** | O(n) | `curr` walks from `head` |
+| reverse() | **Reverse** | O(n) | every node swaps its `prev` and `next`, then `head` and `tail` swap |
+| clear() | **Clear** | O(n) | every node is freed |
+
+### Circular list (one pointer, `tail`; drawn as a ring)
+
+| Operation | Button | Time | What you see |
+| --- | --- | --- | --- |
+| insertFront(value), insertBack(value) | **Insert front**, **Insert back** | O(1) | the new node is linked between the tail and the first node; **Insert back** also moves `tail` |
+| rotate() | **Rotate** | O(1) | `tail` moves one step round the ring: the first node becomes the last, and no link changes |
+| search(value) | **Search value** | O(n) | `curr` goes once round the ring and stops back at the start: there is no NIL |
+| deleteNode(id) | **Delete selected** | O(n) | `prev` walks from the tail to the predecessor, which bypasses the node |
+| clear() | **Clear** | O(n) | the first node is unlinked and freed until the ring is empty |
+
+### Min-heap and max-heap (a binary heap in an array)
+
+| Operation | Button | Time | What you see |
+| --- | --- | --- | --- |
+| insert(value) | **Insert** | O(log n) | the value goes in the next free slot, then swaps with its parent while it beats it (sift up) |
+| extract() | **Extract min** / **Extract max** | O(log n) | the root swaps with the last node and is removed; the node now at the root swaps with its better child until the order holds (sift down) |
+| peek() | **Peek** | O(1) | the root is read: no search |
+| clear() | **Clear** | O(n) | the last slot is removed until the heap is empty |
+
+The page draws the heap twice from one snapshot: as a tree, and as the array it really is
+(slot i has its parent in slot (i − 1) / 2 and its children in 2i + 1 and 2i + 2). A swap
+moves two nodes, with their IDs, between slots.
+
+### Splay tree
+
+The BST's operations, and after each one the node it reached is rotated to the root:
+
+| Step | When | Rotations |
+| --- | --- | --- |
+| zig | the node's parent is the root | one |
+| zig-zig | node and parent are both left children, or both right children | the grandparent first, then the parent |
+| zig-zag | one is a left child, the other a right child | the parent first, then the grandparent |
+
+Insert, search and delete are amortised O(log n). A search changes the tree, so it can be
+undone like any other change; a search that finds nothing still splays the last node on
+its path. Nothing but `left`, `right` and `parent` is stored.
+
+### Hash table (separate chaining, 7 buckets)
+
+| Operation | Button | Time | What you see |
+| --- | --- | --- | --- |
+| insert(value) | **Insert** | O(1) average, O(n) worst | the bucket is computed (value mod 7) and lights up; its chain is checked for the value; the new node is linked at the chain's head |
+| delete(value) | **Delete** | O(1) average, O(n) worst | hash, walk the one chain, link past the node, free it |
+| search(value) | **Search** | O(1) average, O(n) worst | hash, then walk only that bucket's chain |
+| clear() | **Clear** | O(n) | every chain is emptied |
+
+It stores a set: a duplicate is rejected. The bucket count is fixed, so the status line
+shows the load factor growing. The full design of these seven structures is in
+[docs/new-structures.md](docs/new-structures.md).
+
 ## Watching an operation
 
 The workspace has six parts:
 
 | Part | What it shows |
 | --- | --- |
-| **Structure list** (left) | the seven structures; the current one is marked |
+| **Structure list** (left) | **Overview** and the fourteen structures, in three groups; the current one is marked |
 | **Operations** (top) | the structure's buttons and value boxes; Undo, Redo, Export, Import and Reset; the status line; the Examples box |
 | **Drawing** (middle) | the structure at the current step, with pan, zoom and Fit |
 | **Player** (below the drawing) | Replay, Step back, Play/Pause, Step forward, Jump to result, Speed and the step slider |
@@ -429,12 +522,12 @@ files hold C++ algorithms and which hold browser presentation),
 
 | Check | What it proves |
 | --- | --- |
-| 106 native C++ test cases (doctest), `npm run test:cpp` | every operation and every error code, plus the per-operation checks below |
+| 140 native C++ test cases (doctest), `npm run test:cpp` | every operation and every error code, plus the per-operation checks below |
 | Seeded random sequences | for example 10,000 queue, 5,000 list, 3,000 binary-tree and 5,000 BST operations, compared with standard-library oracles (`std::vector`, `std::deque`, `std::set`, `std::map`, allowed in tests) |
 | Golden files and import fixtures | exact JSON responses, and valid and invalid export files for every rule |
 | `npm run test:cpp:asan` | the whole suite under AddressSanitizer and UndefinedBehaviorSanitizer: no use-after-free, leak or undefined behaviour |
-| 27 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all seven structures; the user interactions listed below; any console error fails a test |
-| Native versus WebAssembly | 1,298 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
+| 37 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
+| Native versus WebAssembly | 2,653 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
 | GitHub Actions | on every push: the native tests, the build and the browser smoke tests; the site is deployed only if they pass |
 
 After **every** operation in every C++ test, the tests check:
@@ -648,7 +741,7 @@ and the server `url` in `playwright.config.ts`, to `/<name>/`.
 ```
 dslab/
 ├── engine/
-│   ├── include/dslab/   headers: the seven structures, NodePool, Trace, Frame, Snapshot,
+│   ├── include/dslab/   headers: the fourteen structures, NodePool, Trace, Frame, Snapshot,
 │   │                    History, Validate, Catalog, Engine, TreeTraversal, Limits…
 │   ├── src/             the C++ algorithms (Stack.cpp … RedBlackTree.cpp), Engine, History,
 │   │   └── json/        Validate, Catalog; json/Protocol.cpp: the only JSON code

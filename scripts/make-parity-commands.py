@@ -140,6 +140,136 @@ for order in ['preorder', 'inorder', 'postorder']:
 send('bst', 'search', value=199)
 send('bst', 'clear')
 
+# The structures added after milestone 9. They come after everything above,
+# so the earlier requests stay exactly as they were.
+
+# Deque: both ends.
+for _ in range(90):
+    r = rng.random()
+    if r < 0.5:
+        send('deque', rng.choice(['pushFront', 'pushBack']), value=rng.randint(-100, 100))
+    elif r < 0.78:
+        send('deque', rng.choice(['popFront', 'popBack']))
+    elif r < 0.9:
+        send('deque', rng.choice(['peekFront', 'peekBack']))
+    else:
+        send('deque', rng.choice(['undo', 'redo']))
+send('deque', 'clear')
+invalid('deque', 'popFront')                                    # empty
+invalid('deque', 'peekBack')                                    # empty
+invalid('deque', 'pushBack', value=-2147483649)                 # out of range (protocol)
+invalid('deque', 'pushFront')                                   # missing argument
+
+# Doubly linked list.
+for _ in range(110):
+    r = rng.random()
+    if r < 0.5:
+        send('doublyList', 'insertAt', index=rng.randint(0, 8), value=rng.randint(0, 9))
+    elif r < 0.7:
+        send('doublyList', 'deleteNode', nodeId=rng.randint(1, 60))
+    elif r < 0.85:
+        send('doublyList', 'search', value=rng.randint(0, 9))
+    elif r < 0.92:
+        send('doublyList', 'reverse')
+    else:
+        send('doublyList', rng.choice(['undo', 'redo']))
+invalid('doublyList', 'insertAt', index=-1, value=1)
+invalid('doublyList', 'deleteNode', nodeId=99999)
+invalid('doublyList', 'insertAt', index=0, value=1.5)
+
+# Circular list.
+for _ in range(110):
+    r = rng.random()
+    if r < 0.45:
+        send('circularList', rng.choice(['insertFront', 'insertBack']), value=rng.randint(0, 9))
+    elif r < 0.62:
+        send('circularList', 'deleteNode', nodeId=rng.randint(1, 50))
+    elif r < 0.78:
+        send('circularList', 'search', value=rng.randint(0, 9))
+    elif r < 0.92:
+        send('circularList', 'rotate')
+    else:
+        send('circularList', rng.choice(['undo', 'redo']))
+invalid('circularList', 'deleteNode', nodeId=99999)
+invalid('circularList', 'rotate', value=1)                      # unknown argument
+
+# Heaps.
+for structure in ['minHeap', 'maxHeap']:
+    for _ in range(120):
+        r = rng.random()
+        if r < 0.55:
+            send(structure, 'insert', value=rng.randint(-50, 50))
+        elif r < 0.82:
+            send(structure, 'extract')
+        elif r < 0.92:
+            send(structure, 'peek')
+        else:
+            send(structure, rng.choice(['undo', 'redo']))
+    send(structure, 'export')
+    send(structure, 'clear')
+    invalid(structure, 'extract')                               # empty
+    invalid(structure, 'peek')                                  # empty
+    invalid(structure, 'delete', value=1)                       # not a heap operation
+    # A file whose order is wrong for this heap: a child beats its parent.
+    low, high = (1, 9) if structure == 'maxHeap' else (9, 1)
+    invalid(structure, 'import', text=json.dumps({
+        "format": "dslab-structure", "formatVersion": 1, "nextId": 3,
+        "snapshot": {"structure": structure, "size": 2, "root": 1, "nodes": [
+            {"id": 1, "value": low, "index": 0, "left": 2, "right": None, "parent": None},
+            {"id": 2, "value": high, "index": 1, "left": None, "right": None, "parent": 1}]}}))
+
+# Splay tree: searches change the tree too.
+for _ in range(160):
+    r = rng.random()
+    value = rng.randint(0, 60)
+    if r < 0.42:
+        send('splay', 'insert', value=value)
+    elif r < 0.64:
+        send('splay', 'delete', value=value)
+    elif r < 0.88:
+        send('splay', 'search', value=value)
+    elif r < 0.94:
+        send('splay', rng.choice(['inorder', 'levelorder']))
+    else:
+        send('splay', rng.choice(['undo', 'redo']))
+invalid('splay', 'delete', value=12345)                         # absent
+invalid('splay', 'insert', value=None)                          # wrong type (protocol)
+
+# A 200-node splay tree built from sorted inserts is one long spine: searching
+# its deepest value is the longest splay there is (199 rotations).
+send('splay', 'clear')
+for value in range(200):
+    send('splay', 'insert', value=value)
+send('splay', 'search', value=0)
+send('splay', 'search', value=199)
+invalid('splay', 'insert', value=1000)                          # capacity
+send('splay', 'clear')
+
+# Hash table: negative values too, and a bucket holding every value.
+for _ in range(160):
+    r = rng.random()
+    value = rng.randint(-40, 40)
+    if r < 0.5:
+        send('hashTable', 'insert', value=value)
+    elif r < 0.72:
+        send('hashTable', 'delete', value=value)
+    elif r < 0.92:
+        send('hashTable', 'search', value=value)
+    else:
+        send('hashTable', rng.choice(['undo', 'redo']))
+send('hashTable', 'export')
+invalid('hashTable', 'delete', value=12345)                     # absent
+invalid('hashTable', 'insert', value="7")                       # wrong type (protocol)
+send('hashTable', 'clear')
+for value in range(0, 1400, 7):                                 # 200 values, all in bucket 0
+    send('hashTable', 'insert', value=value)
+send('hashTable', 'search', value=0)
+invalid('hashTable', 'insert', value=7)                         # full (capacity comes before duplicate)
+send('hashTable', 'insert', value=-2147483648)                  # rejected: full
+send('hashTable', 'clear')
+send('hashTable', 'insert', value=-2147483648)                  # bucket 5
+send('hashTable', 'insert', value=2147483647)
+
 # Protocol errors that never reach a structure.
 for text in ['not json', '[1,2]', '{"schemaVersion":2,"requestId":1,"structure":"stack","operation":"pop","args":{}}',
              '{"schemaVersion":1,"requestId":1,"structure":"heap","operation":"pop","args":{}}',

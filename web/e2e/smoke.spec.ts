@@ -1,5 +1,5 @@
 // Deployment smoke test. CI runs every test tagged @smoke (this one, the
-// seven in frames.spec.ts and the one in theme.spec.ts) against `npm run
+// seven in frames.spec.ts, the nine in new-structures.spec.ts and the one in theme.spec.ts) against `npm run
 // preview` before it deploys: the page, its JavaScript, the .wasm engine and
 // the tab icon must all load from under /dslab/, the path GitHub Pages serves
 // the site from.
