@@ -22,6 +22,8 @@ struct NodeView {
     int height = 0;           // AVL: the stored height (0 for other structures)
     int balance = 0;          // AVL: height(left) - height(right), from stored heights
     Color color = Color::None;  // red-black only
+    NodeId prev = kNoNode;    // deque, doubly linked list
+    int index = 0;            // heaps: the array slot the node sits in (0 elsewhere)
 };
 
 struct Snapshot {
@@ -32,8 +34,13 @@ struct Snapshot {
     NodeId top = kNoNode;    // stack
     NodeId front = kNoNode;  // queue
     NodeId rear = kNoNode;   // queue
-    NodeId head = kNoNode;   // list
-    NodeId root = kNoNode;   // trees
+    NodeId head = kNoNode;   // list, doubly linked list
+    NodeId root = kNoNode;   // trees and heaps
+    NodeId tail = kNoNode;   // doubly linked list, circular list
+
+    // Hash table only: the first node of each bucket's chain (kHashBuckets
+    // entries); empty for every other structure.
+    std::vector<NodeId> buckets;
 
     // Red-black only: the color of the NIL sentinel, which is not a listed node.
     Color nilColor = Color::None;
@@ -49,7 +56,7 @@ struct Snapshot {
 inline bool operator==(const NodeView& a, const NodeView& b) {
     return a.id == b.id && a.value == b.value && a.next == b.next && a.left == b.left &&
            a.right == b.right && a.parent == b.parent && a.height == b.height &&
-           a.balance == b.balance && a.color == b.color;
+           a.balance == b.balance && a.color == b.color && a.prev == b.prev && a.index == b.index;
 }
 
 inline bool operator!=(const NodeView& a, const NodeView& b) {
@@ -59,7 +66,7 @@ inline bool operator!=(const NodeView& a, const NodeView& b) {
 inline bool operator==(const Snapshot& a, const Snapshot& b) {
     return a.structure == b.structure && a.size == b.size && a.top == b.top &&
            a.front == b.front && a.rear == b.rear && a.head == b.head && a.root == b.root &&
-           a.nilColor == b.nilColor && a.nodes == b.nodes && a.nextId == b.nextId;
+           a.tail == b.tail && a.buckets == b.buckets && a.nilColor == b.nilColor && a.nodes == b.nodes && a.nextId == b.nextId;
 }
 
 inline bool operator!=(const Snapshot& a, const Snapshot& b) {

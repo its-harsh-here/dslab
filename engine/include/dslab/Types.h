@@ -14,12 +14,46 @@ using NodeId = std::int32_t;
 constexpr NodeId kNoNode = 0;
 
 // The structures this engine implements.
-enum class StructureKind { Stack, Queue, List, BinaryTree, Bst, Avl, RedBlack };
+enum class StructureKind {
+    Stack,
+    Queue,
+    List,
+    BinaryTree,
+    Bst,
+    Avl,
+    RedBlack,
+    Deque,         // double-ended queue: doubly linked, front and rear
+    DoublyList,    // doubly linked list: head and tail
+    CircularList,  // circular singly linked list: one tail pointer
+    MinHeap,       // binary heap in an array, smallest value at the root
+    MaxHeap,       // binary heap in an array, largest value at the root
+    Splay,         // self-adjusting BST: every access is rotated to the root
+    HashTable      // separate chaining: an array of buckets, each a linked chain
+};
 
-// Stack, queue and list nodes link with "next"; tree nodes with left/right/parent.
+// Nodes of these structures link with "next"; every other structure is a
+// tree, whose nodes have left/right/parent.
 inline bool isLinear(StructureKind structure) {
     return structure == StructureKind::Stack || structure == StructureKind::Queue ||
-           structure == StructureKind::List;
+           structure == StructureKind::List || structure == StructureKind::Deque ||
+           structure == StructureKind::DoublyList || structure == StructureKind::CircularList ||
+           structure == StructureKind::HashTable;
+}
+
+// Nodes of these structures also store "prev".
+inline bool hasPrev(StructureKind structure) {
+    return structure == StructureKind::Deque || structure == StructureKind::DoublyList;
+}
+
+// The two binary heaps: their nodes also report the array slot they sit in.
+inline bool isHeap(StructureKind structure) {
+    return structure == StructureKind::MinHeap || structure == StructureKind::MaxHeap;
+}
+
+// Trees whose in-order values strictly increase and that reject duplicates.
+inline bool isSearchTree(StructureKind structure) {
+    return structure == StructureKind::Bst || structure == StructureKind::Avl ||
+           structure == StructureKind::RedBlack || structure == StructureKind::Splay;
 }
 
 // Which child link of a tree node.
@@ -48,6 +82,8 @@ enum class Event {
     Rotate,    // a left or right rotation finished
     Recolor,   // red-black: one node's color was assigned
     Balanced,  // a fix-up finished; the tree's invariants hold again
+    Swap,      // heap: two nodes exchanged array slots
+    Hash,      // hash table: the bucket of a value was computed
     Restore,   // undo, redo or import replaced the whole structure
     Reject,    // the operation was rejected (last frame)
     Done       // the operation succeeded (last frame)

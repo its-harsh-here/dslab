@@ -412,3 +412,47 @@ Rewritten to match the milestone request.
    README commands.
 2. A successful workflow run (checked with `gh`) and the live site opened with Playwright
    MCP; both URLs reported.
+
+---
+
+## Milestone 10: seven more structures, an overview page and a new look
+
+Requested by the owner on 2026-11-13 ("test everything, fix what breaks, make the
+frontend as animated as possible, add as many structures as possible"). Design:
+[new-structures.md](new-structures.md).
+
+Audit of the existing project first:
+- [x] `npm run test:cpp` (106 cases), `npm run build` and the whole Playwright suite (28
+      tests) passed unchanged on a fresh machine: nothing was broken.
+- [x] `playwright.config.ts`: optional `DSLAB_CHROMIUM` for a machine whose Chromium is
+      not the pinned Playwright's build.
+- [ ] The live site could not be opened from the build machine (its network policy blocks
+      github.io); the deployed build is the same `dist/` the browser tests run against.
+
+Engine (native tests written and passing before any UI):
+- [x] `Deque`, `DoublyList`, `CircularList`, `BinaryHeap` (min-heap and max-heap),
+      `SplayTree`, `HashTable`, each with `snapshot()` and `restore()`.
+- [x] Protocol, catalog listings, import validation and history for all seven.
+- [x] Independent invariant checkers for all seven, run after every operation.
+- [x] `engine/tests/test_new_structures.cpp`: behaviour, every rejection, seeded oracle
+      runs (`std::deque`, `std::vector`, `std::priority_queue`, `std::set`), import
+      round trips and broken files, the longest explanations, 200-node worst cases.
+- [x] The audit, catalog and history tests cover all fourteen structures.
+- [x] Found by the new tests and fixed: a splay tree export could not be imported (its
+      validation fell through to the list's chain check).
+
+Web:
+- [x] Pages for the seven structures; `RingSvg`, `HashSvg`, prev links in `ChainSvg`, the
+      heap's array in `TreeSvg`; presets on every page.
+- [x] Overview page; grouped selector with icons.
+- [x] New stylesheet: animated background, glass panels, node entrance, halo on the node
+      a step touches, flowing highlighted links, event chips, counters that flash;
+      everything off under reduced motion; light stays the default theme.
+- [x] `web/e2e/new-structures.spec.ts` (8 tests, @smoke); the parity fixture grew from
+      1,298 to 2,653 requests, the earlier ones unchanged.
+
+Checks run for this milestone: `npm run test:cpp` (140 cases), `npm run test:cpp:asan`,
+`npm run build`, the full Playwright suite (36 tests).
+
+**Not done:** treap, skip list, trie, B-tree and graph structures (each needs its own
+snapshot shape and drawing); array-based circular queue (decision D1 keeps queues linked).

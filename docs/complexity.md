@@ -178,3 +178,29 @@ With n ≤ 200 these are microseconds; they are simple on purpose (rule 12).
 | Text view of the structure | O(n) | when the frame changes |
 
 The page keeps only the newest response per structure; older frames are dropped.
+
+## 5. The milestone 10 structures
+
+Algorithm cost only (tracing adds O(frames × n), as in section 2). Details and the reason
+for each bound: [new-structures.md](new-structures.md).
+
+| Structure | Operation | Algorithm | Frames (measured worst case, n = 200) |
+| --- | --- | --- | --- |
+| Deque | push, pop, peek at either end | O(1) | 6 |
+| Deque | clear | O(n) | n + 2 |
+| Doubly linked list | insertAt | O(min(i, n − i)): walks from the nearer end | about n/2 + 6 |
+| Doubly linked list | deleteNode | O(1): no walk | 6 |
+| Doubly linked list | search, reverse, clear | O(n) | n + 3 |
+| Circular list | insertFront, insertBack, rotate | O(1) | at most 6 |
+| Circular list | deleteNode, search, clear | O(n) | n + 4 |
+| Min-heap, max-heap | insert | O(log n): one comparison and at most one swap per level | 2 log n + 3 = 17 |
+| Min-heap, max-heap | extract | O(log n): at most two comparisons and one swap per level | 2 log n + 5 = 19 |
+| Min-heap, max-heap | peek | O(1) | 3 |
+| Splay tree | insert, search, delete | amortised O(log n); O(n) for one operation on a spine | 2d + 11 at most, d = depth reached (401 for the deepest search of a 200-node spine) |
+| Hash table | insert, delete, search | O(1 + chain length): O(1) on average, O(n) if every value shares a bucket | chain length + 6 (206) |
+| Hash table | clear | O(n + 7) | n + 2 |
+
+"Amortised" for the splay tree means: any sequence of m operations on a tree that never
+holds more than n nodes costs O(m log n) in total, even though one of them can cost
+O(n). The page shows this directly: search the deepest value of a spine (199 rotations),
+then search it again (one comparison).

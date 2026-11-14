@@ -527,6 +527,337 @@ std::vector<OperationListing> redBlackCatalog() {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Deque: every operation exists once per end; the two listings are mirror images.
+
+Lines dequePush(bool front) {
+    const std::string s = front ? "deque.pushFront." : "deque.pushBack.";
+    const std::string end = front ? "front" : "rear";
+    const std::string other = front ? "rear" : "front";
+    return {
+        {s + "enter", std::string(front ? "pushFront" : "pushBack") + "(value):"},
+        {s + "full", "  if size = 200: reject CAPACITY_EXCEEDED"},
+        {s + "create", "  node <- new Node(value)"},
+        {s + "linkEmpty", "  if " + end + " = NIL: " + other + " <- node"},
+        {s + "link", front ? "  else: node.next <- front; front.prev <- node" : "  else: node.prev <- rear; rear.next <- node"},
+        {s + "moveEnd", "  " + end + " <- node"},
+        {s + "done", "  return node"},
+    };
+}
+
+Lines dequePop(bool front) {
+    const std::string s = front ? "deque.popFront." : "deque.popBack.";
+    const std::string end = front ? "front" : "rear";
+    const std::string other = front ? "rear" : "front";
+    return {
+        {s + "enter", std::string(front ? "popFront" : "popBack") + "():"},
+        {s + "empty", "  if " + end + " = NIL: reject EMPTY_STRUCTURE"},
+        {s + "take", "  node <- " + end},
+        {s + "moveEnd", "  " + end + " <- node." + (front ? "next" : "prev")},
+        {s + "clearOther", "  if " + end + " = NIL: " + other + " <- NIL"},
+        {s + "unlink", "  else: " + end + "." + (front ? "prev" : "next") + " <- NIL"},
+        {"", "  value <- node.value"},
+        {s + "remove", "  delete node"},
+        {s + "done", "  return value"},
+    };
+}
+
+Lines dequePeek(bool front) {
+    const std::string s = front ? "deque.peekFront." : "deque.peekBack.";
+    const std::string end = front ? "front" : "rear";
+    return {
+        {s + "enter", std::string(front ? "peekFront" : "peekBack") + "():"},
+        {s + "empty", "  if " + end + " = NIL: reject EMPTY_STRUCTURE"},
+        {s + "read", "  value <- " + end + ".value"},
+        {s + "done", "  return value"},
+    };
+}
+
+std::vector<OperationListing> dequeCatalog() {
+    return {
+        {Operation::PushFront, "O(1)", dequePush(true)},
+        {Operation::PushBack, "O(1)", dequePush(false)},
+        {Operation::PopFront, "O(1)", dequePop(true)},
+        {Operation::PopBack, "O(1)", dequePop(false)},
+        {Operation::PeekFront, "O(1)", dequePeek(true)},
+        {Operation::PeekBack, "O(1)", dequePeek(false)},
+        {Operation::Clear, "O(n)",
+         {{"deque.clear.enter", "clear():"},
+          {"", "  removed <- 0"},
+          {"", "  while front != NIL:"},
+          {"", "    node <- front; front <- node.next"},
+          {"", "    if front = NIL: rear <- NIL  else: front.prev <- NIL"},
+          {"deque.clear.remove", "    delete node"},
+          {"", "    removed <- removed + 1"},
+          {"deque.clear.done", "  return removed"}}},
+    };
+}
+
+std::vector<OperationListing> doublyListCatalog() {
+    const std::string p = "doublyList";
+    return {
+        {Operation::InsertAt, "O(min(i, n - i))",
+         {{p + ".insertAt.enter", "insertAt(index, value):"},
+          {p + ".insertAt.full", "  if size = 200: reject CAPACITY_EXCEEDED"},
+          {p + ".insertAt.badIndex", "  if index < 0 or index > size: reject INDEX_OUT_OF_RANGE"},
+          {"", "  if 0 < index < size:          find the node now at index"},
+          {"", "    if index <= size / 2:"},
+          {p + ".insertAt.startHead", "      curr <- head"},
+          {p + ".insertAt.walkNext", "      repeat index times: curr <- curr.next"},
+          {"", "    else:"},
+          {p + ".insertAt.startTail", "      curr <- tail"},
+          {p + ".insertAt.walkPrev", "      repeat size - 1 - index times: curr <- curr.prev"},
+          {p + ".insertAt.create", "  node <- new Node(value)"},
+          {p + ".insertAt.linkOnly", "  if head = NIL: head <- node; tail <- node"},
+          {"", "  else if index = 0:"},
+          {p + ".insertAt.linkBeforeHead", "    node.next <- head; head.prev <- node"},
+          {p + ".insertAt.moveHead", "    head <- node"},
+          {"", "  else if index = size:"},
+          {p + ".insertAt.linkAfterTail", "    node.prev <- tail; tail.next <- node"},
+          {p + ".insertAt.moveTail", "    tail <- node"},
+          {"", "  else:"},
+          {p + ".insertAt.linkNode", "    node.prev <- curr.prev; node.next <- curr"},
+          {p + ".insertAt.linkNeighbours", "    curr.prev.next <- node; curr.prev <- node"},
+          {p + ".insertAt.done", "  return node"}}},
+        {Operation::DeleteNode, "O(1)",
+         {{p + ".deleteNode.enter", "deleteNode(id):"},
+          {p + ".deleteNode.missing", "  if no node has this ID: reject NODE_NOT_FOUND"},
+          {p + ".deleteNode.found", "  node <- the selected node      (no walk is needed)"},
+          {p + ".deleteNode.moveHead", "  if node.prev = NIL: head <- node.next"},
+          {p + ".deleteNode.bypassNext", "  else: node.prev.next <- node.next"},
+          {p + ".deleteNode.moveTail", "  if node.next = NIL: tail <- node.prev"},
+          {p + ".deleteNode.bypassPrev", "  else: node.next.prev <- node.prev"},
+          {p + ".deleteNode.remove", "  delete node"},
+          {p + ".deleteNode.done", "  return"}}},
+        {Operation::Search, "O(n)",
+         {{p + ".search.enter", "search(value):"},
+          {"", "  curr <- head; index <- 0"},
+          {"", "  while curr != NIL:"},
+          {p + ".search.found", "    if curr.value = value: found"},
+          {p + ".search.next", "    curr <- curr.next; index <- index + 1"},
+          {p + ".search.notFound", "  not found"},
+          {p + ".search.done", "  return the result"}}},
+        {Operation::Reverse, "O(n)",
+         {{p + ".reverse.enter", "reverse():"},
+          {"", "  curr <- head"},
+          {"", "  while curr != NIL:"},
+          {p + ".reverse.flip", "    swap curr.prev and curr.next"},
+          {"", "    curr <- curr.prev           (the old next)"},
+          {p + ".reverse.swapEnds", "  swap head and tail"},
+          {p + ".reverse.done", "  return"}}},
+        {Operation::Clear, "O(n)",
+         {{p + ".clear.enter", "clear():"},
+          {"", "  removed <- 0"},
+          {"", "  while head != NIL:"},
+          {"", "    node <- head; head <- node.next"},
+          {"", "    if head = NIL: tail <- NIL  else: head.prev <- NIL"},
+          {p + ".clear.remove", "    delete node"},
+          {"", "    removed <- removed + 1"},
+          {p + ".clear.done", "  return removed"}}},
+    };
+}
+
+Lines circularInsert(bool front) {
+    const std::string s = front ? "circularList.insertFront." : "circularList.insertBack.";
+    Lines lines = {
+        {s + "enter", std::string(front ? "insertFront" : "insertBack") + "(value):"},
+        {s + "full", "  if size = 200: reject CAPACITY_EXCEEDED"},
+        {s + "create", "  node <- new Node(value)"},
+        {"", "  if tail = NIL:"},
+        {s + "linkSelf", "    node.next <- node"},
+        {s + "setTail", "    tail <- node"},
+        {"", "  else:"},
+        {s + "linkNext", "    node.next <- tail.next        (the first node)"},
+        {s + "linkTail", "    tail.next <- node"},
+    };
+    if (!front) {
+        lines.push_back({s + "moveTail", "    tail <- node"});
+    }
+    lines.push_back({s + "done", "  return node"});
+    return lines;
+}
+
+std::vector<OperationListing> circularListCatalog() {
+    const std::string p = "circularList";
+    return {
+        {Operation::InsertFront, "O(1)", circularInsert(true)},
+        {Operation::InsertBack, "O(1)", circularInsert(false)},
+        {Operation::DeleteNode, "O(n)",
+         {{p + ".deleteNode.enter", "deleteNode(id):"},
+          {p + ".deleteNode.missing", "  if no node has this ID: reject NODE_NOT_FOUND"},
+          {p + ".deleteNode.onlyNode", "  if node.next = node: tail <- NIL"},
+          {"", "  else:"},
+          {p + ".deleteNode.start", "    prev <- tail"},
+          {p + ".deleteNode.walk", "    while prev.next is not node: prev <- prev.next"},
+          {p + ".deleteNode.bypass", "    prev.next <- node.next"},
+          {p + ".deleteNode.moveTail", "    if node = tail: tail <- prev"},
+          {p + ".deleteNode.remove", "  delete node"},
+          {p + ".deleteNode.done", "  return"}}},
+        {Operation::Search, "O(n)",
+         {{p + ".search.enter", "search(value):"},
+          {"", "  if tail != NIL:"},
+          {"", "    curr <- tail.next; index <- 0"},
+          {"", "    repeat:"},
+          {p + ".search.found", "      if curr.value = value: found"},
+          {p + ".search.next", "      curr <- curr.next; index <- index + 1"},
+          {"", "    until curr = tail.next        (a full circle: there is no NIL)"},
+          {p + ".search.notFound", "  not found"},
+          {p + ".search.done", "  return the result"}}},
+        {Operation::Rotate, "O(1)",
+         {{p + ".rotate.enter", "rotate():"},
+          {p + ".rotate.moveTail", "  if tail != NIL: tail <- tail.next"},
+          {p + ".rotate.done", "  return"}}},
+        {Operation::Clear, "O(n)",
+         {{p + ".clear.enter", "clear():"},
+          {"", "  removed <- 0"},
+          {"", "  while tail != NIL:"},
+          {"", "    first <- tail.next"},
+          {"", "    if first = tail: tail <- NIL  else: tail.next <- first.next"},
+          {p + ".clear.remove", "    delete first"},
+          {"", "    removed <- removed + 1"},
+          {p + ".clear.done", "  return removed"}}},
+    };
+}
+
+// The two heaps share their listings; only the comparison and the prefix differ.
+std::vector<OperationListing> heapCatalog(bool isMin) {
+    const std::string p = isMin ? "minHeap" : "maxHeap";
+    const std::string above = isMin ? "<" : ">";
+    const std::string pick = isMin ? "smaller" : "larger";
+    return {
+        {Operation::Insert, "O(log n)",
+         {{p + ".insert.enter", "insert(value):"},
+          {p + ".insert.full", "  if size = 200: reject CAPACITY_EXCEEDED"},
+          {p + ".insert.append", "  i <- size; A[i] <- new Node(value)"},
+          {"", "  while i > 0:                    (sift up)"},
+          {"", "    p <- (i - 1) / 2"},
+          {p + ".insert.compare", "    if not A[i] " + above + " A[p]: stop"},
+          {p + ".insert.swap", "    swap A[i] and A[p]; i <- p"},
+          {p + ".insert.done", "  return the node"}}},
+        {Operation::Extract, "O(log n)",
+         {{p + ".extract.enter", "extract():"},
+          {p + ".extract.empty", "  if size = 0: reject EMPTY_STRUCTURE"},
+          {p + ".extract.take", "  top <- A[0]"},
+          {p + ".extract.moveLast", "  if size > 1: swap A[0] and A[size - 1]"},
+          {p + ".extract.remove", "  remove the last slot; delete top"},
+          {"", "  i <- 0"},
+          {"", "  while i has a child:            (sift down)"},
+          {"", "    c <- the child of i with the " + pick + " value"},
+          {p + ".extract.compare", "    if not A[c] " + above + " A[i]: stop"},
+          {p + ".extract.swap", "    swap A[i] and A[c]; i <- c"},
+          {p + ".extract.done", "  return top.value"}}},
+        {Operation::Peek, "O(1)",
+         {{p + ".peek.enter", "peek():"},
+          {p + ".peek.empty", "  if size = 0: reject EMPTY_STRUCTURE"},
+          {p + ".peek.read", "  value <- A[0].value"},
+          {p + ".peek.done", "  return value"}}},
+        {Operation::Clear, "O(n)",
+         {{p + ".clear.enter", "clear():"},
+          {"", "  removed <- 0"},
+          {"", "  while size > 0:"},
+          {p + ".clear.remove", "    remove the last slot and delete its node"},
+          {"", "    removed <- removed + 1"},
+          {p + ".clear.done", "  return removed"}}},
+    };
+}
+
+// splay(x) as it appears in the listing of 'operation' ("insert", ...), then
+// the two rotations it uses.
+Lines splayLines(const std::string& operation) {
+    const std::string s = "splay." + operation + ".";
+    return {
+        {"", "splay(x):                         rotate x up until it is the root"},
+        {"", "  while x.parent != NIL:"},
+        {"", "    p <- x.parent; g <- p.parent"},
+        {s + "zig", "    if g = NIL: rotate at p                         (zig)"},
+        {s + "zigZig", "    else if x, p are children on the same side: rotate at g, then at p   (zig-zig)"},
+        {s + "zigZag", "    else: rotate at p, then at g                  (zig-zag)"},
+        {"", "rotateLeft(x):                    x's right child y moves up"},
+        {"", "  y <- x.right; x.right <- y.left; if y.left != NIL: y.left.parent <- x"},
+        {"", "  y.parent <- x.parent; put y where x was (root, or x.parent's child)"},
+        {"", "  y.left <- x; x.parent <- y"},
+        {"", "rotateRight(x): the mirror image (left and right exchanged)"},
+    };
+}
+
+std::vector<OperationListing> splayCatalog() {
+    const std::string p = "splay";
+    Lines insert = bstStyleInsert(p, "  node <- new Node(value); node.parent <- parent");
+    insert.push_back({"", "  splay(node)"});
+    insert.push_back({p + ".insert.done", "  return node"});
+    const Lines search = {
+        {p + ".search.enter", "search(value):"},
+        {"", "  curr <- root; last <- NIL"},
+        {"", "  while curr != NIL:"},
+        {"", "    last <- curr"},
+        {p + ".search.found", "    if value = curr.value: found; stop"},
+        {p + ".search.goLeft", "    if value < curr.value: curr <- curr.left"},
+        {p + ".search.goRight", "    else: curr <- curr.right"},
+        {p + ".search.notFound", "  if curr = NIL: not found"},
+        {"", "  if last != NIL: splay(last)"},
+        {p + ".search.done", "  return the result"},
+    };
+    return {
+        {Operation::Insert, "O(log n) amortised", join({insert, splayLines("insert")})},
+        {Operation::Delete, "O(log n) amortised",
+         join({bstStyleDelete(p, {{"", "  if z had a parent: splay(that parent)"}}), splayLines("delete")})},
+        {Operation::Search, "O(log n) amortised", join({search, splayLines("search")})},
+        {Operation::Preorder, "O(n)", traversal(p, Operation::Preorder)},
+        {Operation::Inorder, "O(n)", traversal(p, Operation::Inorder)},
+        {Operation::Postorder, "O(n)", traversal(p, Operation::Postorder)},
+        {Operation::Levelorder, "O(n)", traversal(p, Operation::Levelorder)},
+        {Operation::Clear, "O(n)", treeClear(p)},
+    };
+}
+
+std::vector<OperationListing> hashTableCatalog() {
+    const std::string p = "hashTable";
+    return {
+        {Operation::Insert, "O(1) average, O(n) worst",
+         {{p + ".insert.enter", "insert(value):"},
+          {p + ".insert.full", "  if size = 200: reject CAPACITY_EXCEEDED"},
+          {p + ".insert.hash", "  b <- value mod 7"},
+          {"", "  curr <- buckets[b]"},
+          {"", "  while curr != NIL:"},
+          {p + ".insert.duplicate", "    if curr.value = value: reject DUPLICATE_VALUE"},
+          {p + ".insert.next", "    curr <- curr.next"},
+          {p + ".insert.create", "  node <- new Node(value)"},
+          {p + ".insert.linkNext", "  node.next <- buckets[b]"},
+          {p + ".insert.linkBucket", "  buckets[b] <- node"},
+          {p + ".insert.done", "  return node"}}},
+        {Operation::Delete, "O(1) average, O(n) worst",
+         {{p + ".delete.enter", "delete(value):"},
+          {p + ".delete.hash", "  b <- value mod 7"},
+          {"", "  prev <- NIL; curr <- buckets[b]"},
+          {"", "  while curr != NIL and curr.value != value:"},
+          {p + ".delete.next", "    prev <- curr; curr <- curr.next"},
+          {p + ".delete.notFound", "  if curr = NIL: reject VALUE_NOT_FOUND"},
+          {p + ".delete.found", "  curr holds the value"},
+          {p + ".delete.unlinkHead", "  if prev = NIL: buckets[b] <- curr.next"},
+          {p + ".delete.bypass", "  else: prev.next <- curr.next"},
+          {p + ".delete.remove", "  delete curr"},
+          {p + ".delete.done", "  return"}}},
+        {Operation::Search, "O(1) average, O(n) worst",
+         {{p + ".search.enter", "search(value):"},
+          {p + ".search.hash", "  b <- value mod 7"},
+          {"", "  curr <- buckets[b]"},
+          {"", "  while curr != NIL:"},
+          {p + ".search.found", "    if curr.value = value: found"},
+          {p + ".search.next", "    curr <- curr.next"},
+          {p + ".search.notFound", "  not found"},
+          {p + ".search.done", "  return the result"}}},
+        {Operation::Clear, "O(n)",
+         {{p + ".clear.enter", "clear():"},
+          {"", "  removed <- 0"},
+          {"", "  for b <- 0 to 6:"},
+          {"", "    while buckets[b] != NIL:"},
+          {"", "      node <- buckets[b]; buckets[b] <- node.next"},
+          {p + ".clear.remove", "      delete node"},
+          {"", "      removed <- removed + 1"},
+          {p + ".clear.done", "  return removed"}}},
+    };
+}
+
 }  // namespace
 
 const std::vector<OperationListing>& catalogFor(StructureKind structure) {
@@ -538,6 +869,13 @@ const std::vector<OperationListing>& catalogFor(StructureKind structure) {
     static const std::vector<OperationListing> bst = bstCatalog();
     static const std::vector<OperationListing> avl = avlCatalog();
     static const std::vector<OperationListing> redBlack = redBlackCatalog();
+    static const std::vector<OperationListing> deque = dequeCatalog();
+    static const std::vector<OperationListing> doublyList = doublyListCatalog();
+    static const std::vector<OperationListing> circularList = circularListCatalog();
+    static const std::vector<OperationListing> minHeap = heapCatalog(true);
+    static const std::vector<OperationListing> maxHeap = heapCatalog(false);
+    static const std::vector<OperationListing> splay = splayCatalog();
+    static const std::vector<OperationListing> hashTable = hashTableCatalog();
     switch (structure) {
         case StructureKind::Stack: return stack;
         case StructureKind::Queue: return queue;
@@ -546,6 +884,13 @@ const std::vector<OperationListing>& catalogFor(StructureKind structure) {
         case StructureKind::Bst: return bst;
         case StructureKind::Avl: return avl;
         case StructureKind::RedBlack: return redBlack;
+        case StructureKind::Deque: return deque;
+        case StructureKind::DoublyList: return doublyList;
+        case StructureKind::CircularList: return circularList;
+        case StructureKind::MinHeap: return minHeap;
+        case StructureKind::MaxHeap: return maxHeap;
+        case StructureKind::Splay: return splay;
+        case StructureKind::HashTable: return hashTable;
     }
     return stack;
 }

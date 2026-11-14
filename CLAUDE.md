@@ -17,6 +17,9 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
 - `bash scripts/check-env.sh` — verify the toolchain
 - `npm run test:e2e` — build, native dslab_cli, then Playwright (web/e2e) against
   `npm run preview`, channel "chromium" (bundled); `test:e2e:smoke` = @smoke only (CI).
+  `DSLAB_CHROMIUM=/path/to/chrome` launches that binary instead (machines whose
+  pre-installed Chromium is not the pinned Playwright's build).
+- `python3 scripts/make-parity-commands.py` — rewrite web/e2e/fixtures/parity-commands.jsonl
 
 ## Environment
 - Ubuntu on WSL2, ARM64 (aarch64). Project lives in ~/projects/dslab, never /mnt/c.
@@ -29,9 +32,11 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
   ask me to run it.
 
 ## Engineering rules (non-negotiable)
-1. We implement the teaching structures (stack, queue, singly linked list, binary tree,
-   BST, AVL, red-black) ourselves in C++. Never substitute std::stack, std::queue,
-   std::list, std::set or std::map, and never implement algorithms in TypeScript.
+1. We implement the teaching structures (stack, queue, deque, singly, doubly and
+   circular linked lists, binary tree, BST, AVL, red-black, splay, min-heap, max-heap,
+   hash table) ourselves in C++. Never substitute std::stack, std::queue, std::deque,
+   std::list, std::set, std::map, std::priority_queue or std::unordered_set (nor
+   std::push_heap and friends), and never implement algorithms in TypeScript.
    Standard containers are fine for trace storage, node registries and test oracles.
 2. C++ owns the authoritative state. TypeScript only renders, lays out, plays back and
    collects input.
@@ -46,8 +51,8 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
 8. A rejected operation leaves engine state unchanged.
 9. Values are 32-bit signed ints; at most 200 nodes per structure; trace and history
    memory are bounded (bounds: docs/operation-contract.md, section 8).
-10. Duplicates: allowed in linear structures and the ordinary binary tree; rejected in
-    BST, AVL and red-black trees.
+10. Duplicates: allowed in linear structures, the ordinary binary tree and the heaps;
+    rejected in BST, AVL, red-black and splay trees and in the hash table (a set).
 11. Keep algorithmic complexity separate from tracing and rendering cost.
 12. Code must be simple enough for a student to explain line by line in a viva.
     Prefer clarity over cleverness.
@@ -64,6 +69,11 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
   relinked, never value-copied. AVL (docs/avl.md): height(NIL) 0, leaf 1, balance =
   h(left) − h(right), parent pointers + fix-up walk. Red-black (docs/red-black.md): CLRS,
   one black NIL sentinel owned by the tree; mirror fix-up cases have `…Mirror` step IDs.
+- Milestone 10 structures (docs/new-structures.md): circular list stores only `tail`;
+  heaps are an array of node pointers, a swap exchanges slots (IDs stay with values);
+  splay = BST + splay of the node reached (delete splays the old parent; a rejected
+  operation never splays; search is undoable); hash table = 7 buckets, value mod 7,
+  separate chaining, insert at the chain's head.
 
 ## Layout
 engine/include · engine/src · engine/tests · engine/bindings · engine/third_party ·

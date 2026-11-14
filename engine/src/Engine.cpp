@@ -27,6 +27,13 @@ const char* displayName(StructureKind structure) {
         case StructureKind::Bst: return "BST";
         case StructureKind::Avl: return "AVL tree";
         case StructureKind::RedBlack: return "red-black tree";
+        case StructureKind::Deque: return "deque";
+        case StructureKind::DoublyList: return "doubly linked list";
+        case StructureKind::CircularList: return "circular list";
+        case StructureKind::MinHeap: return "min-heap";
+        case StructureKind::MaxHeap: return "max-heap";
+        case StructureKind::Splay: return "splay tree";
+        case StructureKind::HashTable: return "hash table";
     }
     return "structure";
 }
@@ -54,6 +61,15 @@ std::string operationText(const Request& request) {
         case Operation::DeleteSubtree: return "delete the subtree of #" + std::to_string(request.nodeId);
         case Operation::Insert: return "insert " + value;
         case Operation::Delete: return "delete " + value;
+        case Operation::PushFront: return "push " + value + " at the front";
+        case Operation::PushBack: return "push " + value + " at the rear";
+        case Operation::PopFront: return "pop from the front";
+        case Operation::PopBack: return "pop from the rear";
+        case Operation::InsertFront: return "insert " + value + " at the front";
+        case Operation::InsertBack: return "insert " + value + " at the back";
+        case Operation::Rotate: return "rotate";
+        case Operation::Extract: return "extract";
+        case Operation::Search: return "search " + value;  // a splay tree's search changes the tree
         case Operation::Clear: return "clear";
         case Operation::Import: return "import";
         default: return "the last operation";
@@ -81,6 +97,14 @@ TraversalOrder orderOf(Operation operation) {
     }
 }
 
+// The data of a list search: found, the node and its index (null when not found).
+std::vector<DataField> listSearchData(const ListSearchResult& found) {
+    if (!found.found) {
+        return {booleanField("found", false), nullField("nodeId"), nullField("index")};
+    }
+    return {booleanField("found", true), integerField("nodeId", found.nodeId), integerField("index", found.index)};
+}
+
 // The JSON layer only builds valid structure/operation pairs, so this is never returned.
 Status notAnOperation() {
     return errorStatus(ErrorCode::InternalError,
@@ -91,7 +115,7 @@ Status notAnOperation() {
 
 Response Engine::apply(const Request& request) {
     Trace trace;
-    const bool mutates = isMutating(request.operation);
+    const bool mutates = isMutating(request.structure, request.operation);
 
     Snapshot before;
     if (mutates) {
@@ -121,6 +145,13 @@ Response Engine::apply(const Request& request) {
                 case StructureKind::Bst: outcome = runBst(request, trace); break;
                 case StructureKind::Avl: outcome = runAvl(request, trace); break;
                 case StructureKind::RedBlack: outcome = runRedBlack(request, trace); break;
+                case StructureKind::Deque: outcome = runDeque(request, trace); break;
+                case StructureKind::DoublyList: outcome = runDoublyList(request, trace); break;
+                case StructureKind::CircularList: outcome = runCircularList(request, trace); break;
+                case StructureKind::MinHeap: outcome = runHeap(minHeap_, request, trace); break;
+                case StructureKind::MaxHeap: outcome = runHeap(maxHeap_, request, trace); break;
+                case StructureKind::Splay: outcome = runSplay(request, trace); break;
+                case StructureKind::HashTable: outcome = runHashTable(request, trace); break;
             }
     }
 
@@ -367,6 +398,185 @@ Engine::Outcome Engine::runRedBlack(const Request& request, Trace& trace) {
     }
 }
 
+Engine::Outcome Engine::runDeque(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::PushFront:
+        case Operation::PushBack: {
+            const Deque::End end = request.operation == Operation::PushFront ? Deque::End::Front : Deque::End::Rear;
+            const Result<NodeId> result = deque_.push(end, request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::PopFront:
+        case Operation::PopBack: {
+            const Deque::End end = request.operation == Operation::PopFront ? Deque::End::Front : Deque::End::Rear;
+            const Result<NodeValue> result = deque_.pop(end, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::PeekFront:
+        case Operation::PeekBack: {
+            const Deque::End end = request.operation == Operation::PeekFront ? Deque::End::Front : Deque::End::Rear;
+            const Result<NodeValue> result = deque_.peek(end, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Clear: {
+            const Result<int> result = deque_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
+Engine::Outcome Engine::runDoublyList(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::InsertAt: {
+            const Result<NodeId> result = doublyList_.insertAt(request.index, request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::DeleteNode: {
+            const Result<NodeValue> result = doublyList_.deleteNode(request.nodeId, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<ListSearchResult> result = doublyList_.search(request.value, trace);
+            return {result.status, listSearchData(result.data)};
+        }
+        case Operation::Reverse:
+            return {doublyList_.reverse(trace), {}};
+        case Operation::Clear: {
+            const Result<int> result = doublyList_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
+Engine::Outcome Engine::runCircularList(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::InsertFront:
+        case Operation::InsertBack: {
+            const bool atFront = request.operation == Operation::InsertFront;
+            const Result<NodeId> result = circularList_.insert(atFront, request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::DeleteNode: {
+            const Result<NodeValue> result = circularList_.deleteNode(request.nodeId, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<ListSearchResult> result = circularList_.search(request.value, trace);
+            return {result.status, listSearchData(result.data)};
+        }
+        case Operation::Rotate:
+            return {circularList_.rotate(trace), {}};
+        case Operation::Clear: {
+            const Result<int> result = circularList_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
+// The min-heap and the max-heap are two objects of one class.
+Engine::Outcome Engine::runHeap(BinaryHeap& heap, const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::Insert: {
+            const Result<NodeId> result = heap.insert(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::Extract: {
+            const Result<NodeValue> result = heap.extract(trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Peek: {
+            const Result<NodeValue> result = heap.peek(trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Clear: {
+            const Result<int> result = heap.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
+Engine::Outcome Engine::runSplay(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::Insert: {
+            const Result<NodeId> result = splay_.insert(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::Delete: {
+            const Result<NodeValue> result = splay_.remove(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<BstSearchResult> result = splay_.search(request.value, trace);
+            if (!result.data.found) {
+                return {result.status, {booleanField("found", false), nullField("nodeId")}};
+            }
+            return {result.status, {booleanField("found", true), integerField("nodeId", result.data.nodeId)}};
+        }
+        case Operation::Preorder:
+        case Operation::Inorder:
+        case Operation::Postorder:
+        case Operation::Levelorder: {
+            const Result<TraversalResult> result = splay_.traverse(orderOf(request.operation), trace);
+            return {result.status, traversalData(result.data)};
+        }
+        case Operation::Clear: {
+            const Result<int> result = splay_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
+Engine::Outcome Engine::runHashTable(const Request& request, Trace& trace) {
+    switch (request.operation) {
+        case Operation::Insert: {
+            const Result<NodeId> result = hashTable_.insert(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, {integerField("nodeId", result.data)}};
+        }
+        case Operation::Delete: {
+            const Result<NodeValue> result = hashTable_.remove(request.value, trace);
+            if (!result.status.ok()) return {result.status, {}};
+            return {result.status, nodeData(result.data)};
+        }
+        case Operation::Search: {
+            const Result<HashSearchResult> result = hashTable_.search(request.value, trace);
+            const HashSearchResult& found = result.data;
+            return {result.status,
+                    {booleanField("found", found.found),
+                     found.found ? integerField("nodeId", found.nodeId) : nullField("nodeId"),
+                     integerField("bucket", found.bucket)}};
+        }
+        case Operation::Clear: {
+            const Result<int> result = hashTable_.clear(trace);
+            return {result.status, {integerField("removedCount", result.data)}};
+        }
+        default:
+            return {notAnOperation(), {}};
+    }
+}
+
 Snapshot Engine::snapshot(StructureKind structure) const {
     switch (structure) {
         case StructureKind::Stack: return stack_.snapshot();
@@ -376,6 +586,13 @@ Snapshot Engine::snapshot(StructureKind structure) const {
         case StructureKind::Bst: return bst_.snapshot();
         case StructureKind::Avl: return avl_.snapshot();
         case StructureKind::RedBlack: return redBlack_.snapshot();
+        case StructureKind::Deque: return deque_.snapshot();
+        case StructureKind::DoublyList: return doublyList_.snapshot();
+        case StructureKind::CircularList: return circularList_.snapshot();
+        case StructureKind::MinHeap: return minHeap_.snapshot();
+        case StructureKind::MaxHeap: return maxHeap_.snapshot();
+        case StructureKind::Splay: return splay_.snapshot();
+        case StructureKind::HashTable: return hashTable_.snapshot();
     }
     return Snapshot{};
 }
@@ -397,6 +614,13 @@ History& Engine::history(StructureKind structure) {
         case StructureKind::Bst: return bstHistory_;
         case StructureKind::Avl: return avlHistory_;
         case StructureKind::RedBlack: return redBlackHistory_;
+        case StructureKind::Deque: return dequeHistory_;
+        case StructureKind::DoublyList: return doublyListHistory_;
+        case StructureKind::CircularList: return circularListHistory_;
+        case StructureKind::MinHeap: return minHeapHistory_;
+        case StructureKind::MaxHeap: return maxHeapHistory_;
+        case StructureKind::Splay: return splayHistory_;
+        case StructureKind::HashTable: return hashTableHistory_;
     }
     return stackHistory_;
 }
@@ -410,6 +634,13 @@ const History& Engine::history(StructureKind structure) const {
         case StructureKind::Bst: return bstHistory_;
         case StructureKind::Avl: return avlHistory_;
         case StructureKind::RedBlack: return redBlackHistory_;
+        case StructureKind::Deque: return dequeHistory_;
+        case StructureKind::DoublyList: return doublyListHistory_;
+        case StructureKind::CircularList: return circularListHistory_;
+        case StructureKind::MinHeap: return minHeapHistory_;
+        case StructureKind::MaxHeap: return maxHeapHistory_;
+        case StructureKind::Splay: return splayHistory_;
+        case StructureKind::HashTable: return hashTableHistory_;
     }
     return stackHistory_;
 }
@@ -519,6 +750,13 @@ void Engine::restore(StructureKind structure, const Snapshot& snapshot) {
         case StructureKind::Bst: bst_.restore(snapshot); break;
         case StructureKind::Avl: avl_.restore(snapshot); break;
         case StructureKind::RedBlack: redBlack_.restore(snapshot); break;
+        case StructureKind::Deque: deque_.restore(snapshot); break;
+        case StructureKind::DoublyList: doublyList_.restore(snapshot); break;
+        case StructureKind::CircularList: circularList_.restore(snapshot); break;
+        case StructureKind::MinHeap: minHeap_.restore(snapshot); break;
+        case StructureKind::MaxHeap: maxHeap_.restore(snapshot); break;
+        case StructureKind::Splay: splay_.restore(snapshot); break;
+        case StructureKind::HashTable: hashTable_.restore(snapshot); break;
     }
 }
 

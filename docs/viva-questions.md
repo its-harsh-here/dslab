@@ -170,7 +170,7 @@ to fix it. Wasm memory can grow up to a 128 MiB cap, and its stack is 1 MiB, eno
 200-deep recursion.
 
 **30. How do you know the Wasm build behaves exactly like the native build you tested?**
-They compile the same sources, and `web/e2e/parity.spec.ts` sends the same 1,298
+They compile the same sources, and `web/e2e/parity.spec.ts` sends the same 2,653
 requests (every structure and operation, invalid input, imports, undo/redo, a 200-node
 tree) to the native command runner `dslab_cli` and to the Wasm engine of the production
 build: every response is identical after normalizing.

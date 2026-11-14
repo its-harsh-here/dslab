@@ -5,14 +5,20 @@
 #include <vector>
 
 #include "dslab/AvlTree.h"
+#include "dslab/BinaryHeap.h"
 #include "dslab/BinaryTree.h"
 #include "dslab/Bst.h"
+#include "dslab/CircularList.h"
+#include "dslab/Deque.h"
+#include "dslab/DoublyList.h"
+#include "dslab/HashTable.h"
 #include "dslab/History.h"
 #include "dslab/Queue.h"
 #include "dslab/RedBlackTree.h"
 #include "dslab/Request.h"
 #include "dslab/Response.h"
 #include "dslab/SinglyLinkedList.h"
+#include "dslab/SplayTree.h"
 #include "dslab/Snapshot.h"
 #include "dslab/Stack.h"
 
@@ -42,6 +48,12 @@ private:
     Outcome runBst(const Request& request, Trace& trace);
     Outcome runAvl(const Request& request, Trace& trace);
     Outcome runRedBlack(const Request& request, Trace& trace);
+    Outcome runDeque(const Request& request, Trace& trace);
+    Outcome runDoublyList(const Request& request, Trace& trace);
+    Outcome runCircularList(const Request& request, Trace& trace);
+    Outcome runHeap(BinaryHeap& heap, const Request& request, Trace& trace);
+    Outcome runSplay(const Request& request, Trace& trace);
+    Outcome runHashTable(const Request& request, Trace& trace);
 
     // The shared read-only "snapshot" operation: a begin and a done frame.
     void readSnapshot(StructureKind structure, Trace& trace) const;
@@ -69,6 +81,13 @@ private:
     Bst bst_;
     AvlTree avl_;
     RedBlackTree redBlack_;
+    Deque deque_;
+    DoublyList doublyList_;
+    CircularList circularList_;
+    BinaryHeap minHeap_{StructureKind::MinHeap};
+    BinaryHeap maxHeap_{StructureKind::MaxHeap};
+    SplayTree splay_;
+    HashTable hashTable_;
 
     History stackHistory_;
     History queueHistory_;
@@ -77,6 +96,13 @@ private:
     History bstHistory_;
     History avlHistory_;
     History redBlackHistory_;
+    History dequeHistory_;
+    History doublyListHistory_;
+    History circularListHistory_;
+    History minHeapHistory_;
+    History maxHeapHistory_;
+    History splayHistory_;
+    History hashTableHistory_;
 };
 
 }  // namespace dslab

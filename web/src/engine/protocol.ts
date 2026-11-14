@@ -5,16 +5,21 @@
 export const SCHEMA_VERSION = 1;
 
 /** The structures this build of the engine implements, in tab order. */
-export const STRUCTURES = ['stack', 'queue', 'list', 'binaryTree', 'bst', 'avl', 'redBlack'] as const;
+export const STRUCTURES = [
+  'stack', 'queue', 'deque', 'list', 'doublyList', 'circularList',
+  'binaryTree', 'bst', 'avl', 'redBlack', 'splay',
+  'minHeap', 'maxHeap', 'hashTable',
+] as const;
 export type StructureName = (typeof STRUCTURES)[number];
 
 export type NodeId = number;
 
-/** Stack, queue and list nodes. */
+/** Nodes that link with `next`; deque and doubly linked list nodes also have `prev`. */
 export interface LinearNode {
   readonly id: NodeId;
   readonly value: number;
   readonly next: NodeId | null;
+  readonly prev?: NodeId | null;
 }
 
 export interface StackSnapshot {
@@ -53,10 +58,12 @@ export interface TreeNode {
   /** height(left) - height(right), from the stored heights. */
   readonly balance?: number;
   readonly color?: 'red' | 'black';
+  /** Heaps only: the array slot the node sits in. */
+  readonly index?: number;
 }
 
 export interface TreeSnapshot {
-  readonly structure: 'binaryTree' | 'bst' | 'avl' | 'redBlack';
+  readonly structure: 'binaryTree' | 'bst' | 'avl' | 'redBlack' | 'splay' | 'minHeap' | 'maxHeap';
   readonly size: number;
   readonly root: NodeId | null;
   /** Red-black only: the NIL sentinel's color. Links to NIL are null. */
@@ -64,12 +71,47 @@ export interface TreeSnapshot {
   readonly nodes: readonly TreeNode[];
 }
 
-export type Snapshot = StackSnapshot | QueueSnapshot | ListSnapshot | TreeSnapshot;
+
+export interface DequeSnapshot {
+  readonly structure: 'deque';
+  readonly size: number;
+  readonly front: NodeId | null;
+  readonly rear: NodeId | null;
+  readonly nodes: readonly LinearNode[];
+}
+
+export interface DoublyListSnapshot {
+  readonly structure: 'doublyList';
+  readonly size: number;
+  readonly head: NodeId | null;
+  readonly tail: NodeId | null;
+  readonly nodes: readonly LinearNode[];
+}
+
+/** tail's next is the first node; no link in a non-empty circular list is null. */
+export interface CircularListSnapshot {
+  readonly structure: 'circularList';
+  readonly size: number;
+  readonly tail: NodeId | null;
+  readonly nodes: readonly LinearNode[];
+}
+
+/** `buckets[b]` is the first node of bucket b's chain. */
+export interface HashTableSnapshot {
+  readonly structure: 'hashTable';
+  readonly size: number;
+  readonly buckets: readonly (NodeId | null)[];
+  readonly nodes: readonly LinearNode[];
+}
+
+export type Snapshot =
+  | StackSnapshot | QueueSnapshot | ListSnapshot | TreeSnapshot
+  | DequeSnapshot | DoublyListSnapshot | CircularListSnapshot | HashTableSnapshot;
 
 export type EventName =
   | 'begin' | 'compare' | 'move' | 'visit' | 'read' | 'found' | 'notFound'
   | 'create' | 'link' | 'unlink' | 'remove' | 'update' | 'imbalance' | 'fixupCase' | 'rotate' | 'balanced'
-  | 'recolor' | 'restore' | 'reject' | 'done';
+  | 'recolor' | 'restore' | 'reject' | 'done' | 'swap' | 'hash';
 
 /** The algorithm's own work (contract 6.5); in a frame, the work done so far. */
 export interface Counters {
@@ -89,6 +131,8 @@ export interface Frame<S extends Snapshot = Snapshot> {
   readonly pointers: Readonly<Record<string, NodeId | null>>;
   readonly output: readonly number[];
   readonly pending: readonly NodeId[];
+  /** Hash table frames only: the bucket this step works in, or null. */
+  readonly bucket?: number | null;
   readonly counters: Counters;
   readonly snapshot: S;
 }

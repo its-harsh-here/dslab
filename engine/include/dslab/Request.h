@@ -37,6 +37,19 @@ enum class Operation {
     // BST
     Insert,
     Delete,
+    // deque
+    PushFront,
+    PushBack,
+    PopFront,
+    PopBack,
+    PeekFront,
+    PeekBack,
+    // circular list
+    InsertFront,
+    InsertBack,
+    Rotate,
+    // heaps (Insert, Peek and Clear are shared)
+    Extract,
     // trees
     Preorder,
     Inorder,
@@ -51,6 +64,14 @@ enum class Operation {
 // lists instead of adding one, so they are not listed here.
 inline bool isMutating(Operation operation) {
     switch (operation) {
+        case Operation::PushFront:
+        case Operation::PushBack:
+        case Operation::PopFront:
+        case Operation::PopBack:
+        case Operation::InsertFront:
+        case Operation::InsertBack:
+        case Operation::Rotate:
+        case Operation::Extract:
         case Operation::Push:
         case Operation::Pop:
         case Operation::Enqueue:
@@ -69,6 +90,16 @@ inline bool isMutating(Operation operation) {
         default:
             return false;
     }
+}
+
+// The same question for one structure. A splay tree's search is the one
+// exception to the rule above: it rotates the node it reached to the root, so
+// it changes the tree and gets an undo entry like any other change.
+inline bool isMutating(StructureKind structure, Operation operation) {
+    if (structure == StructureKind::Splay && operation == Operation::Search) {
+        return true;
+    }
+    return isMutating(operation);
 }
 
 struct Request {

@@ -6,6 +6,7 @@ import { CHAIN_NODE } from '../layout/linear';
 import { ArrowDefs, BoxNode, PointerLabels, useArrows, type Arrows } from './parts';
 
 const { width: W, height: H } = CHAIN_NODE;
+const LINK_GAP = 8; // doubly linked: next links run this far above the middle, prev links this far below
 
 /** A marker and the node it points at (null means NIL). */
 export interface ChainMarker {
@@ -22,13 +23,15 @@ interface Props {
   /** The marker at the other end (REAR, TAIL): drawn below. */
   exit: ChainMarker;
   label: string;
+  /** Nodes also store prev (deque, doubly linked list): draw those links too, below the next links. */
+  doubly?: boolean;
   /** Show each reachable node's index under it (the list). */
   showIndices?: boolean;
   selectedId?: NodeId | null;
   onSelect?: (id: NodeId) => void;
 }
 
-export function ChainSvg({ frame, layout, viewBox, entry, exit, label, showIndices, selectedId, onSelect }: Props) {
+export function ChainSvg({ frame, layout, viewBox, entry, exit, label, showIndices, doubly, selectedId, onSelect }: Props) {
   const arrows = useArrows();
   const { snapshot, highlight, pointers } = frame;
   const chain = chainFrom(snapshot.nodes, entry.target);
@@ -42,11 +45,37 @@ export function ChainSvg({ frame, layout, viewBox, entry, exit, label, showIndic
       preserveAspectRatio="xMidYMid meet" viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}>
       <ArrowDefs arrows={arrows} />
 
+      {doubly && snapshot.nodes.map((node) => {
+        // prev links: on the lower line, drawn from the side that faces their target.
+        const from = layout.nodes.get(node.id);
+        if (!from) return null;
+        const y1 = from.y + H / 2 + LINK_GAP;
+        if (node.prev === null || node.prev === undefined) {
+          return (
+            <g key={`null-prev-${node.id}`} className="null-link">
+              <line x1={from.x} y1={y1} x2={from.x - 20} y2={y1} markerEnd={arrows.normal} />
+              <text x={from.x - 24} y={y1 + 4} textAnchor="end">NULL</text>
+            </g>
+          );
+        }
+        const to = layout.nodes.get(node.prev);
+        if (!to) return null;
+        const id = edgeId(node.id, node.prev);
+        const hot = hotEdges.has(id);
+        const leftward = to.x <= from.x;
+        return (
+          <line key={`prev-${id}`} data-edge-id={id} data-link="prev" className={hot ? 'edge prev highlighted' : 'edge prev'}
+            x1={leftward ? from.x : from.x + W} y1={y1} x2={leftward ? to.x + W + 2 : to.x - 2} y2={to.y + H / 2 + LINK_GAP}
+            markerEnd={hot ? arrows.hot : arrows.normal} />
+        );
+      })}
+
       {snapshot.nodes.map((node) => {
         const from = layout.nodes.get(node.id);
         if (!from) return null;
+        const lift = doubly ? -LINK_GAP : 0; // next links move up to make room for prev links
         const x1 = from.x + W;
-        const y1 = from.y + H / 2;
+        const y1 = from.y + H / 2 + lift;
         if (node.next === null) {
           return (
             <g key={`null-${node.id}`} className="null-link">
@@ -59,9 +88,12 @@ export function ChainSvg({ frame, layout, viewBox, entry, exit, label, showIndic
         if (!to) return null;
         const id = edgeId(node.id, node.next);
         const hot = hotEdges.has(id);
+        // In the middle of a reversal a next link can point left: leave from the left side then.
+        const leftward = doubly === true && to.x < from.x;
         return (
           <line key={id} data-edge-id={id} className={hot ? 'edge highlighted' : 'edge'}
-            x1={x1} y1={y1} x2={to.x - 2} y2={to.y + H / 2} markerEnd={hot ? arrows.hot : arrows.normal} />
+            x1={leftward ? from.x : x1} y1={y1} x2={leftward ? to.x + W + 2 : to.x - 2} y2={to.y + H / 2 + lift}
+            markerEnd={hot ? arrows.hot : arrows.normal} />
         );
       })}
 

@@ -51,6 +51,13 @@ std::string wire(StructureKind structure) {
         case StructureKind::Bst: return "bst";
         case StructureKind::Avl: return "avl";
         case StructureKind::RedBlack: return "redBlack";
+        case StructureKind::Deque: return "deque";
+        case StructureKind::DoublyList: return "doublyList";
+        case StructureKind::CircularList: return "circularList";
+        case StructureKind::MinHeap: return "minHeap";
+        case StructureKind::MaxHeap: return "maxHeap";
+        case StructureKind::Splay: return "splay";
+        case StructureKind::HashTable: return "hashTable";
     }
     return "?";
 }
@@ -76,6 +83,23 @@ const std::vector<std::pair<StructureKind, std::vector<Step>>>& sequences() {
         {StructureKind::RedBlack,
          {{O::Insert, 10}, {O::Insert, 20}, {O::Insert, 30}, {O::Insert, 15}, {O::Insert, 25}, {O::Delete, 10}, {O::Delete, 30},
           {O::Clear}, {O::Insert, 7}}},
+        {StructureKind::Deque,
+         {{O::PushBack, 10}, {O::PushFront, 20}, {O::PushBack, 30}, {O::PopFront}, {O::PopBack}, {O::Clear}, {O::PushFront, 40}}},
+        {StructureKind::DoublyList,
+         {{O::InsertAt, 10, 0}, {O::InsertAt, 20, 1}, {O::InsertAt, 15, 1}, {O::DeleteNode, 0, 0, 2}, {O::Reverse}, {O::Clear},
+          {O::InsertAt, 5, 0}}},
+        {StructureKind::CircularList,
+         {{O::InsertBack, 10}, {O::InsertFront, 20}, {O::InsertBack, 30}, {O::Rotate}, {O::DeleteNode, 0, 0, 2}, {O::Clear},
+          {O::InsertFront, 5}}},
+        {StructureKind::MinHeap,
+         {{O::Insert, 30}, {O::Insert, 20}, {O::Insert, 10}, {O::Insert, 25}, {O::Extract}, {O::Clear}, {O::Insert, 5}}},
+        {StructureKind::MaxHeap,
+         {{O::Insert, 10}, {O::Insert, 20}, {O::Insert, 30}, {O::Insert, 25}, {O::Extract}, {O::Clear}, {O::Insert, 5}}},
+        {StructureKind::Splay,
+         {{O::Insert, 20}, {O::Insert, 10}, {O::Insert, 30}, {O::Search, 10}, {O::Insert, 25}, {O::Delete, 20}, {O::Clear},
+          {O::Insert, 5}}},
+        {StructureKind::HashTable,
+         {{O::Insert, 3}, {O::Insert, 10}, {O::Insert, 17}, {O::Insert, 4}, {O::Delete, 10}, {O::Clear}, {O::Insert, 5}}},
     };
     return all;
 }

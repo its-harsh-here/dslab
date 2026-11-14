@@ -5,15 +5,22 @@ import { STRUCTURES, type Snapshot, type StructureName } from './engine/protocol
 import { AvlPanel } from './panels/AvlPanel';
 import { BinaryTreePanel } from './panels/BinaryTreePanel';
 import { BstPanel } from './panels/BstPanel';
+import { CircularListPanel } from './panels/CircularListPanel';
+import { DequePanel } from './panels/DequePanel';
+import { DoublyListPanel } from './panels/DoublyListPanel';
 import { EngineLoadErrorView } from './panels/EngineLoadErrorView';
+import { HashTablePanel } from './panels/HashTablePanel';
+import { HeapPanel } from './panels/HeapPanel';
 import { ListPanel } from './panels/ListPanel';
 import { QueuePanel } from './panels/QueuePanel';
 import { RedBlackPanel } from './panels/RedBlackPanel';
+import { SplayPanel } from './panels/SplayPanel';
 import { StackPanel } from './panels/StackPanel';
 import type { Player } from './playback/player';
 import { createPlayers, type Players } from './playback/players';
 import type { StageCommands } from './ui/Stage';
-import { StructureNav } from './ui/StructureNav';
+import { Home } from './ui/Home';
+import { StructureNav, type View } from './ui/StructureNav';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useKeyboardShortcuts } from './ui/useKeyboardShortcuts';
 
@@ -22,10 +29,13 @@ type LoadState =
   | { kind: 'ready'; engine: LoadedEngine }
   | { kind: 'failed'; error: unknown };
 
-/** The structure named in the URL (e.g. "#queue"), so a structure can be linked to directly. */
-function structureFromUrl(): StructureName {
+/**
+ * The page named in the URL: a structure (e.g. "#queue"), so one can be linked
+ * to directly, or the overview when the URL names none.
+ */
+function viewFromUrl(): View {
   const name = window.location.hash.slice(1);
-  return (STRUCTURES as readonly string[]).includes(name) ? (name as StructureName) : 'stack';
+  return (STRUCTURES as readonly string[]).includes(name) ? (name as StructureName) : 'home';
 }
 
 export function App() {
@@ -45,10 +55,25 @@ export function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>DSLab</h1>
+        <div className="brand">
+          <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <line x1={16} y1={8} x2={8} y2={22} />
+            <line x1={16} y1={8} x2={24} y2={22} />
+            <circle className="m0" cx={16} cy={8} r={4.5} />
+            <circle className="m1" cx={8} cy={22} r={4.5} />
+            <circle className="m2" cx={24} cy={22} r={4.5} />
+          </svg>
+          <h1>DSLab</h1>
+        </div>
+        <p className="subtitle">Data structures, step by step. C++ engine, running in your browser.</p>
         <ThemeToggle />
       </header>
-      {state.kind === 'loading' && <p className="loading" role="status">Loading the C++ engine (WebAssembly)…</p>}
+      {state.kind === 'loading' && (
+        <p className="loading" role="status">
+          <span className="loader" aria-hidden="true"><i /><i /><i /></span>
+          Loading the C++ engine (WebAssembly)…
+        </p>
+      )}
       {state.kind === 'failed' && <EngineLoadErrorView error={state.error} />}
       {state.kind === 'ready' && <Simulator engine={state.engine} />}
     </div>
@@ -58,27 +83,48 @@ export function App() {
 function Simulator({ engine }: { engine: LoadedEngine }) {
   // Created once; the players keep each structure's state while another one is shown.
   const [players] = useState<Players>(() => createPlayers(engine));
-  const [active, setActive] = useState<StructureName>(structureFromUrl);
+  const [active, setActive] = useState<View>(viewFromUrl);
   const stageCommands = useRef<StageCommands | null>(null);
-  useKeyboardShortcuts(players[active] as Player<Snapshot>, stageCommands);
 
-  function choose(structure: StructureName) {
-    if (structure === active) return;
+  function choose(view: View) {
+    if (view === active) return;
     // Leaving a structure stops its playback and drops its waiting batch.
-    players[active].cancel();
-    setActive(structure);
-    window.history.replaceState(null, '', `#${structure}`);
+    if (active !== 'home') players[active].cancel();
+    setActive(view);
+    window.history.replaceState(null, '', `#${view}`);
   }
+
+  // The brand link and hand-edited URLs change the hash without a click here.
+  const chooseRef = useRef(choose);
+  chooseRef.current = choose;
+  useEffect(() => {
+    const onHashChange = () => chooseRef.current(viewFromUrl());
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   return (
     <>
       <StructureNav active={active} onChoose={choose} />
       <main className="app-main">
-        {/* Keyed by structure: each page starts with fresh local state (inputs, selection, camera). */}
-        <Page key={active} structure={active} players={players} engine={engine} stageCommands={stageCommands} />
+        {active === 'home' ? (
+          <Home onChoose={choose} />
+        ) : (
+          <>
+            <Shortcuts player={players[active] as Player<Snapshot>} stageCommands={stageCommands} />
+            {/* Keyed by structure: each page starts with fresh local state (inputs, selection, camera). */}
+            <Page key={active} structure={active} players={players} engine={engine} stageCommands={stageCommands} />
+          </>
+        )}
       </main>
     </>
   );
+}
+
+/** The keyboard listener of the structure on screen (none on the overview). */
+function Shortcuts({ player, stageCommands }: { player: Player<Snapshot>; stageCommands: MutableRefObject<StageCommands | null> }) {
+  useKeyboardShortcuts(player, stageCommands);
+  return null;
 }
 
 function Page({ structure, players, engine, stageCommands }: {
@@ -103,5 +149,19 @@ function Page({ structure, players, engine, stageCommands }: {
       return <AvlPanel player={players.avl} {...common} />;
     case 'redBlack':
       return <RedBlackPanel player={players.redBlack} {...common} />;
+    case 'deque':
+      return <DequePanel player={players.deque} {...common} />;
+    case 'doublyList':
+      return <DoublyListPanel player={players.doublyList} {...common} />;
+    case 'circularList':
+      return <CircularListPanel player={players.circularList} {...common} />;
+    case 'minHeap':
+      return <HeapPanel player={players.minHeap} kind="min" {...common} />;
+    case 'maxHeap':
+      return <HeapPanel player={players.maxHeap} kind="max" {...common} />;
+    case 'splay':
+      return <SplayPanel player={players.splay} {...common} />;
+    case 'hashTable':
+      return <HashTablePanel player={players.hashTable} {...common} />;
   }
 }

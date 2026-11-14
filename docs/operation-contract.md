@@ -38,7 +38,12 @@ Contents:
   and is written as `null` in JSON.
 - **Capacity**: at most 200 nodes per structure.
 - **Structures** and their wire names: `stack`, `queue`, `list` (singly linked list),
-  `binaryTree` (ordinary binary tree), `bst`, `avl`, `redBlack`.
+  `binaryTree` (ordinary binary tree), `bst`, `avl`, `redBlack`; and, since milestone 10,
+  `deque`, `doublyList`, `circularList`, `minHeap`, `maxHeap`, `splay`, `hashTable`.
+  Those seven are specified in [new-structures.md](new-structures.md): their operations,
+  errors, step IDs, snapshot fields (`prev`, `index`, `tail`, `buckets`), the frame field
+  `bucket`, the events `swap` and `hash`, and their import rules. Everything in this
+  document that is said of "every structure" holds for them too.
 - **Selection is by ID.** The UI identifies nodes by ID only. The BST-family operations
   `delete` and `search` take a value because the textbook algorithm is keyed by value.
   Clicking a node in those tabs only copies its value into the input box.
@@ -445,7 +450,7 @@ was recognized, otherwise they are `null`.
 | --- | --- |
 | `BAD_REQUEST` | Not JSON; not an object; a required field is missing; an unknown field is present (top level or in `args`); a field has the wrong type; a number that should be an integer is not one; `side` is not `"left"`/`"right"`; request text longer than 1 MiB. |
 | `UNSUPPORTED_VERSION` | `schemaVersion` is present but is not 1. Checked first, so future versions are recognized before their fields are judged. |
-| `UNKNOWN_STRUCTURE` | `structure` is not one of the seven wire names. |
+| `UNKNOWN_STRUCTURE` | `structure` is not one of the fourteen wire names. |
 | `UNKNOWN_OPERATION` | The structure has no such operation, or it is not implemented yet in the current milestone. |
 | `VALUE_OUT_OF_RANGE` | An integer argument (`value`, `index`, `nodeId`, `parentId`) lies outside the 32-bit signed range. The message names the argument. |
 
@@ -459,13 +464,13 @@ detected, then `reject`. Every frame's snapshot equals the begin snapshot. The f
 | --- | --- | --- |
 | `CAPACITY_EXCEEDED` | any operation that creates a node, when n = 200 | "The stack already holds 200 nodes, the maximum." |
 | `ID_EXHAUSTED` | creating a node when the next ID would exceed 2,147,483,647 (reachable only after importing a file with huge IDs) | "No node IDs are left for this structure." |
-| `EMPTY_STRUCTURE` | `pop`, `peek`, `dequeue`, `front` on an empty structure | "Cannot pop: the stack is empty." |
+| `EMPTY_STRUCTURE` | `pop`, `peek`, `dequeue`, `front` on an empty structure; also the deque's pops and peeks and a heap's `extract` and `peek` | "Cannot pop: the stack is empty." |
 | `INDEX_OUT_OF_RANGE` | `insertAt` with index < 0 or index > n | "Index 7 is outside 0 to 3 for a list of 3 nodes." |
 | `NODE_NOT_FOUND` | `deleteNode`, `addChild`, `deleteSubtree` with an ID that is not a node of this structure | "There is no node with ID 12 in this tree." |
 | `ROOT_EXISTS` | `addRoot` on a non-empty binary tree | "The tree already has a root." |
 | `CHILD_EXISTS` | `addChild` into an occupied side | "Node 15 already has a left child." |
-| `DUPLICATE_VALUE` | `insert` of a value already present in `bst`, `avl`, `redBlack` | "20 is already in the BST, and a BST does not allow duplicates." |
-| `VALUE_NOT_FOUND` | `delete` of an absent value in `bst`, `avl`, `redBlack` | "25 is not in the AVL tree, so there is nothing to delete." |
+| `DUPLICATE_VALUE` | `insert` of a value already present in `bst`, `avl`, `redBlack`, `splay`, `hashTable` | "20 is already in the BST, and a BST does not allow duplicates." |
+| `VALUE_NOT_FOUND` | `delete` of an absent value in `bst`, `avl`, `redBlack`, `splay`, `hashTable` | "25 is not in the AVL tree, so there is nothing to delete." |
 | `NOTHING_TO_UNDO` / `NOTHING_TO_REDO` | `undo` / `redo` with an empty list | "There is nothing to undo." |
 | `IMPORT_INVALID` | `import` text that is not valid JSON, has the wrong format, version or structure, or breaks any rule in 5.7 | "Node 4 has balance 2, but an AVL tree allows only −1, 0 or +1." |
 
@@ -522,7 +527,7 @@ in that order and ignore whitespace.
 | --- | --- | --- |
 | `schemaVersion` | integer | Must be 1. |
 | `requestId` | integer 0 to 2,147,483,647 | Chosen by the caller (TypeScript counts up from 1). Echoed back; the engine never relies on it. |
-| `structure` | string | One of the seven wire names. |
+| `structure` | string | One of the fourteen wire names. |
 | `operation` | string | An operation of that structure (section 2). |
 | `args` | object | Exactly the arguments the operation lists. Always present, `{}` when there are none. Unknown keys are `BAD_REQUEST`. |
 
@@ -779,6 +784,8 @@ playback and teaching clearer.
 | `recolor` | A red-black color was assigned (one frame per assignment). |
 | `balanced` | A fix-up finished and the tree's invariants hold again. AVL: the walk reached the root; every balance on the path is −1, 0 or +1. Red-black: all five properties hold. |
 | `restore` | `undo`, `redo` or `import` replaced the whole structure. |
+| `swap` | Heaps: two nodes exchanged array slots (added in milestone 10; new-structures.md). |
+| `hash` | Hash table: the bucket of a value was computed (added in milestone 10). |
 | `reject` | The operation was rejected. Always the last frame of an operation error. |
 | `done` | The operation succeeded. Always the last frame of a success. |
 
@@ -1207,7 +1214,7 @@ All of these live in `engine/include/dslab/Limits.h`; tests check each bound.
 | Node ID range | 1 to 2,147,483,647, never reused | `ID_EXHAUSTED` if the counter would pass the maximum. |
 | Frames per operation | 512 | The worst real operation is a traversal of 200 nodes: 2n + 2 = 402 frames. Tests require ≤ 2n + 16. If the cap were ever hit, step frames stop being stored, the final `done`/`reject` frame is still added and `metrics.trace.truncated` is true. Tests fail on that. |
 | Node views per response | ≤ 512 × 200 = 102,400 | About 3.7 MB in C++; at most about 8 MB of JSON (about 6.5 MB for a 200-node red-black traversal; about 0.5 MB for a typical AVL insert into 200 nodes). |
-| History | 50 snapshots per structure, undo and redo together | The oldest undo entry is dropped when a 51st change is recorded. Undo and redo only move entries between the two lists, so their sum never exceeds 50. All 7 structures together hold ≤ 7 × 50 × 200 = 70,000 node views (under 3 MB). |
+| History | 50 snapshots per structure, undo and redo together | The oldest undo entry is dropped when a 51st change is recorded. Undo and redo only move entries between the two lists, so their sum never exceeds 50. All 14 structures together hold ≤ 7 × 50 × 200 = 70,000 node views (under 3 MB). |
 | Request text | 1 MiB (1,048,576 bytes) | `BAD_REQUEST` beyond it. An export of 200 nodes is about 16 KB. |
 | Explanation | 1 sentence, ≤ 140 characters | Checked by tests. |
 | Recursion depth | ≤ 200 | Tree height ≤ n. The Wasm stack is set to 1 MiB, and an end-to-end test traverses a degenerate 200-node BST. |
@@ -1231,7 +1238,7 @@ All of these live in `engine/include/dslab/Limits.h`; tests check each bound.
 
 ## 10. Node ownership
 
-1. **The `Engine` owns the structures.** It holds one instance of each of the seven
+1. **The `Engine` owns the structures.** It holds one instance of each of the fourteen
    structures and one `History` per structure as plain members, for as long as the
    JavaScript `Engine` handle lives (the page lifetime).
 2. **Each structure owns its nodes through a `NodePool`**: a
@@ -1303,3 +1310,8 @@ list and the affected sections together.
 | D27 | Wire JSON is compact; golden files and exports are 2-space indented; comparison ignores whitespace but not key order. | Small messages, readable files, deterministic tests. |
 | D28 | Deployment: GitHub Pages through GitHub Actions, Vite `base: "./"`. | Free static hosting; a relative base works under any sub-path. Changing hosts touches only milestone 9. |
 | D29 | Pseudocode listings live in the C++ catalog and reach the UI through the `catalog` operation. | Step IDs and pseudocode text cannot drift apart. |
+| D31 | Milestone 10 adds seven structures without a new schema version: new wire names, operations, optional snapshot fields and two events are compatible additions (section 9). The hash table's frame field `bucket` appears only in hash table frames, and no counter was added, so every existing golden file is unchanged. | Old clients and files keep working; nothing released was renamed. |
+| D32 | Heaps are arrays of node pointers; snapshots derive `left`/`right`/`parent` from the slots and report the slot as `index`. A swap exchanges slots and counts 2 `linksChanged`. | The heap is taught as an array, drawn as a tree, and IDs stay with values (rule 3). |
+| D33 | Splay delete is the BST delete followed by a splay of the deleted node's old parent; a rejected operation never splays; `search` on a splay tree is a mutating operation with an undo entry. | The classic splay-then-join delete can exceed 2n + 16 frames; rule 8 (a rejection changes nothing) outranks "splay on every access". |
+| D34 | The hash table is a set with 7 fixed buckets, bucket = value mod 7 made non-negative, separate chaining, insertion at the chain's head, no rehashing. | Small enough to see every bucket; chains that grow show what a load factor means. |
+| D35 | The circular list stores only `tail`; indexes count from `tail.next`. | Both ends in O(1) with one pointer, and `rotate` is a single assignment. |

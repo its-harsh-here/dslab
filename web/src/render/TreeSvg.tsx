@@ -18,13 +18,19 @@ interface Props {
   onSelect?: (id: NodeId) => void;
   /** Red-black: draw a NIL leaf for every missing child of a node in the tree. */
   showNil?: boolean;
+  /** Heaps: label every node with its array slot, and draw the array itself under the tree. */
+  heapArray?: boolean;
 }
+
+// The heap's array: one cell per slot, this far below the lowest node's centre.
+const CELL = 46;
+const ARRAY_DROP = 78;
 
 // A NIL leaf sits this far left or right of its parent's centre, and this far below it.
 const NIL_DX = 26;
 const NIL_TOP = 42;
 
-export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, showNil = false }: Props) {
+export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, showNil = false, heapArray = false }: Props) {
   const arrows = useArrows();
   const { snapshot, highlight, pointers } = frame;
   const reachable = treeReachable(snapshot);
@@ -82,6 +88,14 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, s
         );
       })}
 
+      {/* Halos are drawn in their own layer: their endless pulse must not change a node's own box. */}
+      {snapshot.nodes.map((node) => {
+        const at = layout.nodes.get(node.id);
+        return at && hotNodes.has(node.id) ? (
+          <circle key={`halo-${node.id}`} className="halo" cx={at.x} cy={at.y} r={R + 6} />
+        ) : null;
+      })}
+
       {snapshot.nodes.map((node) => {
         const at = layout.nodes.get(node.id);
         if (!at) return null;
@@ -94,6 +108,7 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, s
           <g key={node.id} data-node-id={node.id} data-color={node.color} transform={`translate(${at.x} ${at.y})`}
             className={classes}
             {...selectableProps(node.id, node.value, selected, onSelect, node.color)}>
+            <g className="node-pop">
             {selected && <circle className="selection-ring" r={R + 5} />}
             <circle className="node-body" r={R} />
             <text className="node-value" y={6} textAnchor="middle">{node.value}</text>
@@ -104,14 +119,42 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, s
                 <text y={3.5} textAnchor="middle">{node.color === 'red' ? 'R' : 'B'}</text>
               </g>
             )}
+            {heapArray && node.index !== undefined && (
+              <text className="avl-label" data-slot-label y={R + 26} textAnchor="middle">slot {node.index}</text>
+            )}
             {node.height !== undefined && node.balance !== undefined && (
               <text className={unbalanced ? 'avl-label unbalanced' : 'avl-label'} data-avl-label y={R + 26} textAnchor="middle">
                 h{node.height} · bf {node.balance > 0 ? `+${node.balance}` : node.balance}
               </text>
             )}
+            </g>
           </g>
         );
       })}
+
+      {heapArray && snapshot.nodes.length > 0 && (() => {
+        // The same nodes, as the array the heap really is: cell i holds the node in slot i.
+        const positions = [...layout.nodes.values()];
+        const left = Math.min(...positions.map((at) => at.x)) - R;
+        const top = Math.max(...positions.map((at) => at.y)) + ARRAY_DROP;
+        const bySlot = [...snapshot.nodes].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+        return (
+          <g className="heap-array" aria-label="The heap as an array">
+            <text className="heap-array-title" x={left} y={top - 8}>array</text>
+            {bySlot.map((node) => {
+              const slot = node.index ?? 0;
+              return (
+                <g key={slot} className={hotNodes.has(node.id) ? 'heap-cell highlighted' : 'heap-cell'} data-slot={slot}
+                  transform={`translate(${left + slot * CELL} ${top})`}>
+                  <rect width={CELL - 4} height={34} rx={6} />
+                  <text className="heap-cell-value" x={(CELL - 4) / 2} y={22} textAnchor="middle">{node.value}</text>
+                  <text className="index-label" x={(CELL - 4) / 2} y={48} textAnchor="middle">{slot}</text>
+                </g>
+              );
+            })}
+          </g>
+        );
+      })()}
 
       <g className="marker" data-marker="ROOT">
         <text x={root.x} y={root.y - 52} textAnchor="middle">ROOT</text>

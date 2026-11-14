@@ -30,6 +30,10 @@ public:
 
     Counters counters;
 
+    // Hash table only: the bucket the algorithm is working in, copied into
+    // every frame recorded from now on (-1: none yet).
+    int bucket = -1;
+
 private:
     std::vector<Frame> frames_;
     bool truncated_ = false;

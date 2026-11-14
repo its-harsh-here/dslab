@@ -37,6 +37,13 @@ std::string article(StructureKind structure) {
         case StructureKind::Bst: return "a BST";
         case StructureKind::Avl: return "an AVL tree";
         case StructureKind::RedBlack: return "a red-black tree";
+        case StructureKind::Deque: return "a deque";
+        case StructureKind::DoublyList: return "a doubly linked list";
+        case StructureKind::CircularList: return "a circular list";
+        case StructureKind::MinHeap: return "a min-heap";
+        case StructureKind::MaxHeap: return "a max-heap";
+        case StructureKind::Splay: return "a splay tree";
+        case StructureKind::HashTable: return "a hash table";
     }
     return "a structure";
 }
@@ -76,15 +83,23 @@ Status checkNodes(const Snapshot& snapshot) {
 Status checkLinks(const Snapshot& snapshot, const Registry& byId) {
     const std::vector<std::pair<const char*, NodeId>> entries = {
         {"top", snapshot.top}, {"front", snapshot.front}, {"rear", snapshot.rear},
-        {"head", snapshot.head}, {"root", snapshot.root}};
+        {"head", snapshot.head}, {"root", snapshot.root}, {"tail", snapshot.tail}};
     for (const auto& [name, target] : entries) {
         if (target != kNoNode && byId.count(target) == 0) {
             return invalid(std::string(name) + " points to node " + text(target) + ", which is not in the file.");
         }
     }
+    for (std::size_t bucket = 0; bucket < snapshot.buckets.size(); ++bucket) {
+        const NodeId target = snapshot.buckets[bucket];
+        if (target != kNoNode && byId.count(target) == 0) {
+            return invalid("Bucket " + text(static_cast<std::int64_t>(bucket)) + " points to node " + text(target) +
+                           ", which is not in the file.");
+        }
+    }
     for (const NodeView& node : snapshot.nodes) {
         const std::vector<std::pair<const char*, NodeId>> links = {
-            {"next", node.next}, {"left", node.left}, {"right", node.right}, {"parent", node.parent}};
+            {"next", node.next}, {"left", node.left}, {"right", node.right}, {"parent", node.parent},
+            {"prev", node.prev}};
         for (const auto& [name, target] : links) {
             if (target != kNoNode && byId.count(target) == 0) {
                 return invalid("Node " + text(node.id) + "'s " + name + " points to node " + text(target) +
@@ -96,8 +111,11 @@ Status checkLinks(const Snapshot& snapshot, const Registry& byId) {
 }
 
 // Rule 5: the chain from the entry pointer visits every node once and ends at
-// NIL; a queue's rear is the chain's last node.
-Status checkChain(const Snapshot& snapshot, const Registry& byId, NodeId entry, const std::string& entryName) {
+// NIL. A structure that also stores the chain's last node (the queue's and
+// deque's rear, the doubly linked list's tail) passes its name in 'endName'
+// and its value in 'end'. With prev links, each must mirror a next link.
+Status checkChain(const Snapshot& snapshot, const Registry& byId, NodeId entry, const std::string& entryName,
+                  const std::string& endName = "", NodeId end = kNoNode) {
     if ((entry == kNoNode) != snapshot.nodes.empty()) {
         return invalid(entryName + " must be null exactly when there are no nodes.");
     }
@@ -108,6 +126,11 @@ Status checkChain(const Snapshot& snapshot, const Registry& byId, NodeId entry, 
             return invalid("Following next from " + entryName + " comes back to node " + text(node) +
                            ": the links form a cycle.");
         }
+        if (hasPrev(snapshot.structure) && byId.at(node).prev != last) {
+            return invalid("Node " + text(node) + "'s prev must be " +
+                           (last == kNoNode ? std::string("null") : "node " + text(last)) +
+                           ", the node whose next points at it.");
+        }
         last = node;
     }
     for (const NodeView& node : snapshot.nodes) {
@@ -115,9 +138,113 @@ Status checkChain(const Snapshot& snapshot, const Registry& byId, NodeId entry, 
             return invalid("Node " + text(node.id) + " cannot be reached from " + entryName + ".");
         }
     }
-    if (snapshot.structure == StructureKind::Queue && snapshot.rear != last) {
-        return invalid("rear is " + (snapshot.rear == kNoNode ? std::string("null") : "node " + text(snapshot.rear)) +
+    if (!endName.empty() && end != last) {
+        return invalid(endName + " is " + (end == kNoNode ? std::string("null") : "node " + text(end)) +
                        ", but the last node of the chain is node " + text(last) + ".");
+    }
+    return okStatus();
+}
+
+// Circular list: tail is null exactly when there are no nodes; following next
+// from tail visits every node exactly once and then comes back to tail, so no
+// next link is NIL.
+Status checkCircle(const Snapshot& snapshot, const Registry& byId) {
+    if ((snapshot.tail == kNoNode) != snapshot.nodes.empty()) {
+        return invalid("tail must be null exactly when there are no nodes.");
+    }
+    for (const NodeView& node : snapshot.nodes) {
+        if (node.next == kNoNode) {
+            return invalid("Node " + text(node.id) + "'s next is null, but a circular list has no NIL link.");
+        }
+    }
+    std::set<NodeId> seen;
+    NodeId node = snapshot.tail;
+    while (node != kNoNode && seen.insert(node).second) {
+        node = byId.at(node).next;
+    }
+    if (node != snapshot.tail) {
+        return invalid("Following next from tail reaches node " + text(node) +
+                       " twice without coming back to tail: the links do not form one circle.");
+    }
+    for (const NodeView& view : snapshot.nodes) {
+        if (seen.count(view.id) == 0) {
+            return invalid("Node " + text(view.id) + " cannot be reached from tail.");
+        }
+    }
+    return okStatus();
+}
+
+// Heaps: the slots are 0..n-1, each used once; root and every left, right and
+// parent link are exactly what the slots imply; and the heap order holds
+// between every node and its parent.
+Status checkHeap(const Snapshot& snapshot) {
+    const int count = static_cast<int>(snapshot.nodes.size());
+    std::vector<const NodeView*> slots(snapshot.nodes.size(), nullptr);  // non-owning: point into snapshot.nodes
+    for (const NodeView& node : snapshot.nodes) {
+        if (node.index < 0 || node.index >= count) {
+            return invalid("Node " + text(node.id) + " is in slot " + text(node.index) + ", but the slots of " +
+                           text(count) + " nodes are 0 to " + text(count - 1) + ".");
+        }
+        const NodeView*& slot = slots[static_cast<std::size_t>(node.index)];
+        if (slot != nullptr) {
+            return invalid("Nodes " + text(slot->id) + " and " + text(node.id) + " are both in slot " +
+                           text(node.index) + ".");
+        }
+        slot = &node;
+    }
+    const auto idAt = [&](int index) { return index < count ? slots[static_cast<std::size_t>(index)]->id : kNoNode; };
+    if (snapshot.root != idAt(0)) {
+        return invalid("root must be the node in slot 0" + std::string(count == 0 ? " (null for an empty heap)." : "."));
+    }
+    const bool isMin = snapshot.structure == StructureKind::MinHeap;
+    for (const NodeView& node : snapshot.nodes) {
+        const NodeId parent = node.index == 0 ? kNoNode : idAt((node.index - 1) / 2);
+        if (node.left != idAt(2 * node.index + 1) || node.right != idAt(2 * node.index + 2) || node.parent != parent) {
+            return invalid("Node " + text(node.id) + "'s left, right and parent do not match its slot, " +
+                           text(node.index) + ".");
+        }
+        if (node.index == 0) continue;
+        const NodeView& above = *slots[static_cast<std::size_t>((node.index - 1) / 2)];
+        if (isMin ? node.value < above.value : node.value > above.value) {
+            return invalid("Node " + text(node.id) + " (" + text(node.value) + ") is " + (isMin ? "smaller" : "larger") +
+                           " than its parent, node " + text(above.id) + " (" + text(above.value) + "), which " +
+                           article(snapshot.structure) + " does not allow.");
+        }
+    }
+    return okStatus();
+}
+
+// Hash table: exactly kHashBuckets buckets; each chain ends at NIL; every
+// node is in exactly one chain, the one its value hashes to; no value twice.
+Status checkBuckets(const Snapshot& snapshot, const Registry& byId) {
+    if (static_cast<int>(snapshot.buckets.size()) != kHashBuckets) {
+        return invalid("A hash table has exactly " + text(kHashBuckets) + " buckets.");
+    }
+    std::set<NodeId> seen;
+    std::map<Value, NodeId> holder;  // value -> the node that holds it
+    for (int bucket = 0; bucket < kHashBuckets; ++bucket) {
+        for (NodeId node = snapshot.buckets[static_cast<std::size_t>(bucket)]; node != kNoNode; node = byId.at(node).next) {
+            if (!seen.insert(node).second) {
+                return invalid("Node " + text(node) + " is reached twice: the chains must not share nodes or loop.");
+            }
+            const Value value = byId.at(node).value;
+            const int remainder = static_cast<int>(value % kHashBuckets);
+            const int home = remainder < 0 ? remainder + kHashBuckets : remainder;
+            if (home != bucket) {
+                return invalid("Node " + text(node) + " holds " + text(value) + ", which belongs in bucket " +
+                               text(home) + ", but it is in bucket " + text(bucket) + ".");
+            }
+            if (holder.count(value) != 0) {
+                return invalid("The value " + text(value) + " appears twice (nodes " + text(holder[value]) + " and " +
+                               text(node) + "), but a hash table has no duplicates.");
+            }
+            holder[value] = node;
+        }
+    }
+    for (const NodeView& node : snapshot.nodes) {
+        if (seen.count(node.id) == 0) {
+            return invalid("Node " + text(node.id) + " is not in any bucket's chain.");
+        }
     }
     return okStatus();
 }
@@ -285,12 +412,19 @@ Status validateSnapshot(const Snapshot& snapshot) {
 
     switch (snapshot.structure) {
         case StructureKind::Stack: return checkChain(snapshot, byId, snapshot.top, "top");
-        case StructureKind::Queue: return checkChain(snapshot, byId, snapshot.front, "front");
+        case StructureKind::Queue: return checkChain(snapshot, byId, snapshot.front, "front", "rear", snapshot.rear);
+        case StructureKind::Deque: return checkChain(snapshot, byId, snapshot.front, "front", "rear", snapshot.rear);
+        case StructureKind::DoublyList: return checkChain(snapshot, byId, snapshot.head, "head", "tail", snapshot.tail);
+        case StructureKind::CircularList: return checkCircle(snapshot, byId);
+        case StructureKind::HashTable: return checkBuckets(snapshot, byId);
+        case StructureKind::MinHeap:
+        case StructureKind::MaxHeap: return checkHeap(snapshot);
         case StructureKind::List: return checkChain(snapshot, byId, snapshot.head, "head");
         case StructureKind::BinaryTree:
         case StructureKind::Bst:
         case StructureKind::Avl:
         case StructureKind::RedBlack:
+        case StructureKind::Splay:
             break;
     }
     status = checkTreeShape(snapshot, byId);

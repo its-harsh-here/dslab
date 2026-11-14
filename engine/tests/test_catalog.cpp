@@ -22,7 +22,10 @@ namespace {
 const std::vector<StructureKind> kStructures = {StructureKind::Stack, StructureKind::Queue,
                                                 StructureKind::List,  StructureKind::BinaryTree,
                                                 StructureKind::Bst,   StructureKind::Avl,
-                                                StructureKind::RedBlack};
+                                                StructureKind::RedBlack,   StructureKind::Deque,
+                                                StructureKind::DoublyList, StructureKind::CircularList,
+                                                StructureKind::MinHeap,    StructureKind::MaxHeap,
+                                                StructureKind::Splay,      StructureKind::HashTable};
 
 Json catalogResponse(Engine& engine, StructureKind structure) {
     const std::string request = R"({"schemaVersion":1,"requestId":1,"structure":")" + test::wireName(structure) +
@@ -44,6 +47,13 @@ TEST_CASE("catalog: every operation that runs an algorithm has a listing, in con
         {StructureKind::Bst, trees},
         {StructureKind::Avl, trees},
         {StructureKind::RedBlack, trees},
+        {StructureKind::Deque, {"pushFront", "pushBack", "popFront", "popBack", "peekFront", "peekBack", "clear"}},
+        {StructureKind::DoublyList, {"insertAt", "deleteNode", "search", "reverse", "clear"}},
+        {StructureKind::CircularList, {"insertFront", "insertBack", "deleteNode", "search", "rotate", "clear"}},
+        {StructureKind::MinHeap, {"insert", "extract", "peek", "clear"}},
+        {StructureKind::MaxHeap, {"insert", "extract", "peek", "clear"}},
+        {StructureKind::Splay, trees},
+        {StructureKind::HashTable, {"insert", "delete", "search", "clear"}},
     };
     Engine engine;
     for (const auto& [structure, operations] : expected) {

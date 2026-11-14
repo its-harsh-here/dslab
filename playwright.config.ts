@@ -5,7 +5,13 @@
 // channel "chromium" is Playwright's own bundled Chromium (chromium-1248 for
 // @playwright/test 1.64.1) in its new headless mode, so the separate
 // "headless shell" download is not needed.
+//
+// DSLAB_CHROMIUM (optional) names a Chromium binary to launch instead, for a
+// machine whose pre-installed Chromium is not the build this Playwright
+// version downloads (for example a cloud container without network access).
 import { defineConfig } from '@playwright/test';
+
+const chromiumPath = process.env.DSLAB_CHROMIUM;
 
 export default defineConfig({
   testDir: 'web/e2e',
@@ -22,6 +28,7 @@ export default defineConfig({
     channel: 'chromium',
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
+    ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
   },
   webServer: {
     command: 'npm run preview -- --port 4173 --strictPort',

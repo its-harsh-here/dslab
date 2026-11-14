@@ -27,6 +27,7 @@ void Trace::frame(Snapshot snapshot, Event event, std::string stepId, std::strin
     next.output = std::move(output);
     next.pending = std::move(pending);
     next.counters = counters;
+    next.bucket = bucket;
     next.snapshot = std::move(snapshot);
     frames_.push_back(std::move(next));
 }
