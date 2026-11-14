@@ -1,5 +1,5 @@
-// What the page knows about each structure for its menus: names, the group it
-// is listed under, one line about it, the headline costs, and a small icon.
+// What the page knows about each structure for its menus: its name, the group
+// it is listed under, one line about it, its headline costs, and a small icon.
 // Presentation only: every fact about behaviour comes from C++ at run time.
 import type { ReactNode } from 'react';
 
@@ -7,14 +7,10 @@ import type { StructureName } from '../engine/protocol';
 
 export interface StructureInfo {
   readonly label: string;
-  /** A shorter name for the narrow layout, where the selector is a row of chips. */
-  readonly short: string;
   readonly group: 'Linear' | 'Trees' | 'Heaps and hashing';
   readonly blurb: string;
   /** Headline costs shown on the overview card. */
   readonly costs: readonly string[];
-  /** A hue (0 to 360) that tints this structure's card and icon. */
-  readonly hue: number;
   readonly icon: ReactNode;
 }
 
@@ -44,86 +40,86 @@ function treeIcon(marks: readonly number[] = []) {
 
 export const STRUCTURE_INFO: Record<StructureName, StructureInfo> = {
   stack: {
-    label: 'Stack', short: 'Stack', group: 'Linear', hue: 222,
-    blurb: 'Last in, first out. Push and pop at one end.',
+    label: 'Stack', group: 'Linear',
+    blurb: 'Last in, first out. Push and pop at the top.',
     costs: ['push O(1)', 'pop O(1)'],
     icon: <Icon>{box(6, 3, 12, 4.5)}{box(6, 9.5, 12, 4.5)}{box(6, 16, 12, 4.5)}</Icon>,
   },
   queue: {
-    label: 'Queue', short: 'Queue', group: 'Linear', hue: 200,
+    label: 'Queue', group: 'Linear',
     blurb: 'First in, first out. Enqueue at the rear, dequeue at the front.',
     costs: ['enqueue O(1)', 'dequeue O(1)'],
     icon: <Icon>{box(1.5, 9.5, 5.5, 5)}{box(9.2, 9.5, 5.5, 5)}{box(17, 9.5, 5.5, 5)}{line(7, 12, 9.2, 12)}{line(14.7, 12, 17, 12)}</Icon>,
   },
   deque: {
-    label: 'Deque', short: 'Deque', group: 'Linear', hue: 186,
-    blurb: 'A double-ended queue: push, pop and peek at both ends.',
+    label: 'Deque', group: 'Linear',
+    blurb: 'A double-ended queue: add, remove and read at either end.',
     costs: ['both ends O(1)'],
     icon: <Icon>{box(5, 9.5, 5.5, 5)}{box(13.5, 9.5, 5.5, 5)}{line(10.5, 12, 13.5, 12)}<path d="M4 8 L1.5 12 L4 16 M20 8 L22.5 12 L20 16" /></Icon>,
   },
   list: {
-    label: 'Linked list', short: 'List', group: 'Linear', hue: 168,
-    blurb: 'Singly linked nodes from head: insert, delete, search, reverse.',
+    label: 'Linked list', group: 'Linear',
+    blurb: 'Singly linked nodes from a head pointer.',
     costs: ['insert O(i)', 'search O(n)'],
     icon: <Icon>{dot(4, 12)}{dot(12, 12)}{dot(20, 12)}{line(6.4, 12, 9.6, 12)}{line(14.4, 12, 17.6, 12)}</Icon>,
   },
   doublyList: {
-    label: 'Doubly linked list', short: 'Doubly', group: 'Linear', hue: 152,
-    blurb: 'Every node links to both neighbours: delete a node without walking.',
+    label: 'Doubly linked list', group: 'Linear',
+    blurb: 'Nodes link both ways, so a node is removed without a walk.',
     costs: ['delete O(1)', 'insert O(min(i, n − i))'],
     icon: <Icon>{dot(4, 12)}{dot(12, 12)}{dot(20, 12)}{line(6.4, 10.6, 9.6, 10.6)}{line(6.4, 13.4, 9.6, 13.4)}{line(14.4, 10.6, 17.6, 10.6)}{line(14.4, 13.4, 17.6, 13.4)}</Icon>,
   },
   circularList: {
-    label: 'Circular list', short: 'Circular', group: 'Linear', hue: 130,
-    blurb: 'The last node links back to the first. Rotate in one step.',
+    label: 'Circular list', group: 'Linear',
+    blurb: 'The last node links back to the first; only the tail is stored.',
     costs: ['insert O(1)', 'rotate O(1)'],
     icon: <Icon><circle cx={12} cy={12} r={7.5} className="ring" />{dot(12, 4.5)}{dot(19.5, 12)}{dot(12, 19.5)}{dot(4.5, 12)}</Icon>,
   },
   binaryTree: {
-    label: 'Binary tree', short: 'Binary tree', group: 'Trees', hue: 262,
-    blurb: 'You choose where each node goes. Four traversals, step by step.',
+    label: 'Binary tree', group: 'Trees',
+    blurb: 'You choose where each node goes. Pre-, in-, post- and level-order traversal.',
     costs: ['traversals O(n)'],
     icon: treeIcon(),
   },
   bst: {
-    label: 'Binary search tree', short: 'BST', group: 'Trees', hue: 278,
-    blurb: 'Smaller left, larger right. Fast when balanced, a list when not.',
+    label: 'Binary search tree', group: 'Trees',
+    blurb: 'Smaller values to the left, larger to the right.',
     costs: ['search O(h)', 'insert O(h)'],
     icon: treeIcon([0]),
   },
   avl: {
-    label: 'AVL tree', short: 'AVL', group: 'Trees', hue: 296,
-    blurb: 'Heights differ by at most one. LL, LR, RR and RL rotations.',
+    label: 'AVL tree', group: 'Trees',
+    blurb: 'Height-balanced with LL, LR, RR and RL rotations.',
     costs: ['every operation O(log n)'],
     icon: treeIcon([0, 1, 2]),
   },
   redBlack: {
-    label: 'Red-black tree', short: 'Red-black', group: 'Trees', hue: 350,
-    blurb: 'Balanced by color rules: recolor and rotate, the CLRS way.',
+    label: 'Red-black tree', group: 'Trees',
+    blurb: 'Balanced by color rules, with recoloring and rotations.',
     costs: ['every operation O(log n)'],
     icon: treeIcon([1, 2]),
   },
   splay: {
-    label: 'Splay tree', short: 'Splay', group: 'Trees', hue: 322,
-    blurb: 'Every access is rotated to the root: zig, zig-zig and zig-zag.',
+    label: 'Splay tree', group: 'Trees',
+    blurb: 'Each access rotates the node it reached to the root.',
     costs: ['amortised O(log n)'],
     icon: treeIcon([0, 4]),
   },
   minHeap: {
-    label: 'Min-heap', short: 'Min-heap', group: 'Heaps and hashing', hue: 28,
-    blurb: 'A priority queue in an array: the smallest value is always on top.',
+    label: 'Min-heap', group: 'Heaps and hashing',
+    blurb: 'A complete binary tree stored in an array; the minimum is at the root.',
     costs: ['insert O(log n)', 'extract O(log n)'],
     icon: <Icon>{line(12, 5, 6, 13)}{line(12, 5, 18, 13)}{dot(12, 5, 2.6)}{dot(6, 13, 2.6)}{dot(18, 13, 2.6)}{box(3, 18.5, 4, 3.5)}{box(8, 18.5, 4, 3.5)}{box(13, 18.5, 4, 3.5)}{box(18, 18.5, 4, 3.5)}</Icon>,
   },
   maxHeap: {
-    label: 'Max-heap', short: 'Max-heap', group: 'Heaps and hashing', hue: 12,
-    blurb: 'The same array heap, with the largest value on top.',
+    label: 'Max-heap', group: 'Heaps and hashing',
+    blurb: 'A complete binary tree stored in an array; the maximum is at the root.',
     costs: ['insert O(log n)', 'extract O(log n)'],
     icon: <Icon>{line(12, 5, 6, 13)}{line(12, 5, 18, 13)}<circle cx={12} cy={5} r={3.2} className="fill" />{dot(6, 13, 2.2)}{dot(18, 13, 2.2)}{box(3, 18.5, 4, 3.5)}{box(8, 18.5, 4, 3.5)}{box(13, 18.5, 4, 3.5)}{box(18, 18.5, 4, 3.5)}</Icon>,
   },
   hashTable: {
-    label: 'Hash table', short: 'Hash table', group: 'Heaps and hashing', hue: 46,
-    blurb: 'Seven buckets, separate chaining: one hash step, one short chain.',
+    label: 'Hash table', group: 'Heaps and hashing',
+    blurb: 'Seven buckets with separate chaining.',
     costs: ['average O(1)', 'worst O(n)'],
     icon: <Icon>{box(2, 3, 5, 4.5)}{box(2, 9.7, 5, 4.5)}{box(2, 16.5, 5, 4.5)}{line(7, 5.2, 10.5, 5.2)}{dot(12.5, 5.2, 2)}{line(14.5, 5.2, 17.5, 5.2)}{dot(19.5, 5.2, 2)}{line(7, 18.7, 10.5, 18.7)}{dot(12.5, 18.7, 2)}</Icon>,
   },

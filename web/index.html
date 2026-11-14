@@ -2,8 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google Tag Manager. Loaded on the deployed site only: local development
+         and the browser tests (localhost) send nothing to Google. -->
+    <script>
+      if (!/^(localhost|127\.\d+\.\d+\.\d+|\[::1\])$/.test(location.hostname)) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        var gtm = document.createElement('script');
+        gtm.async = true;
+        gtm.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-PHB2RT78';
+        document.head.appendChild(gtm);
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DSLab</title>
+    <title>DSLab · Data structure visualizer</title>
+    <meta name="description" content="Interactive visualizer for stacks, queues, linked lists, trees, heaps and hash tables. Step through every operation with pseudocode, explanations and costs." />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DSLab · Data structure visualizer" />
+    <meta property="og:description" content="Step through stacks, queues, linked lists, trees, heaps and hash tables, one operation at a time." />
+    <meta property="og:url" content="https://its-harsh-here.github.io/dslab/" />
     <!-- web/public/: Vite serves these under the base path (/dslab/favicon.svg). -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

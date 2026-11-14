@@ -17,6 +17,7 @@ export const SHORTCUTS: readonly [string, string][] = [
   ['+ / − / 0', 'zoom in / out / fit'],
   ['Shift + arrows', 'pan'],
   ['Ctrl+Z / Ctrl+Y', 'undo / redo the last operation'],
+  ['Ctrl+B', 'show / hide the sidebar'],
   ['Esc', 'leave a text box'],
 ];
 

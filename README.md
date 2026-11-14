@@ -11,19 +11,18 @@ Every frame you see was recorded **inside the running C++ algorithm**. There is 
 JavaScript copy of any algorithm and no server: the whole simulator runs in your browser
 tab.
 
-![DSLab's overview page: a heading, and one animated card for each of the fourteen structures](docs/screenshots/m10-overview.png)
+![DSLab's overview page: one card for each of the fourteen structures, grouped, with the structure list on the left](docs/screenshots/m10-overview.png)
 
-*The overview page. Every card opens a structure; the list on the left is always there.*
+*The overview page. Every card opens a structure. The list on the left can be hidden
+with the button at the top left or Ctrl+B; on a phone it is a drawer.*
 
 | | |
 | --- | --- |
-| ![A hash table: seven buckets, bucket 1 lit, a new node about to be linked at the head of its chain](docs/screenshots/m10-hash-table.png) | ![A min-heap drawn as a tree with the same values in an array underneath](docs/screenshots/m10-min-heap.png) |
-| *Hash table: the bucket a step works in is lit.* | *Min-heap: one snapshot, drawn as a tree and as its array.* |
-| ![A circular list drawn as a ring of six nodes](docs/screenshots/m10-circular-list.png) | ![An AVL tree in dark mode](docs/screenshots/m10-avl-dark.png) |
-| *Circular list: a ring, with only `tail` stored.* | *Dark mode.* |
+| ![An AVL tree paused while a new node is created](docs/screenshots/m10-avl.png) | ![A hash table in dark mode, the bucket being worked in marked](docs/screenshots/m10-hash-table.png) |
+| *An AVL insert, paused at step 5 of 15.* | *Hash table, dark mode: the bucket a step works in is marked.* |
 
-The screenshots further down were taken before the milestone 10 redesign: what they show
-is unchanged, but the styling in them is the older, plainer one.
+The screenshots further down were taken before the current design: what they show is
+unchanged, but the styling in them is older.
 
 ![DSLab: a red-black tree paused in delete fix-up case 4, with the pseudocode line, the selected node's properties and the operation counters](docs/screenshots/readme-red-black-delete.png)
 
@@ -58,9 +57,9 @@ counted so far.*
   tree (BST), AVL tree, red-black tree, splay tree, min-heap, max-heap and hash table.
   No `std::stack`, `std::queue`, `std::deque`, `std::list`, `std::set`, `std::map`,
   `std::priority_queue` or `std::unordered_set`.
-- **An overview page** with a card for every structure, and an animated interface: new
-  nodes pop in, the node a step touches pulses, links in use flow towards their arrow,
-  and each step is labelled with what it does (compare, link, rotate, swap, hash…).
+- **An overview page** with a card for every structure, a structure list that can be
+  hidden (Ctrl+B; a drawer on phones), tab titles and Back/Forward that follow the page,
+  and each step labelled with what it does (compare, link, rotate, swap, hash…).
 - **Every step is a real frame.** A frame holds the whole structure, the highlighted
   nodes and edges, the algorithm's pointer variables, an event type, a one-sentence
   explanation written in C++, and the ID of the pseudocode line being executed.
@@ -84,7 +83,7 @@ counted so far.*
   - 140 native C++ test cases, with an independent invariant checker after every
     operation;
   - the same suite under AddressSanitizer and UBSan;
-  - 36 browser tests that compare the screen with C++'s frames;
+  - 40 browser tests that compare the screen with C++'s frames;
   - 2,653 requests answered identically by the native and the WebAssembly builds.
 
 ## The fourteen structures
@@ -478,6 +477,14 @@ including the protocol errors, is in
 | ![Queue dequeue: the old front is unlinked and drawn dashed; text view open](docs/screenshots/readme-queue-dequeue.png) | <img src="docs/screenshots/readme-phone-avl.png" width="260" alt="Phone layout: AVL delete, LR case, first rotation"> |
 | **Queue dequeue**, step 3 of 5: `front` has moved to 9. The old front, 14, is no longer linked: it is drawn dashed and listed under "Not linked in this step" in the text view. | **Phone layout** (390 px): AVL delete 50, LR case, the first of the two rotations. |
 
+## Analytics
+
+The deployed site loads Google Tag Manager (container `GTM-PHB2RT78`, in
+`web/index.html`) and reports moves between pages inside the app as
+`virtual_page_view` events (`web/src/analytics.ts`). Nothing about structures, values or
+operations is sent. The container is never loaded on `localhost`, so local development
+and the browser tests send nothing.
+
 ## How it works
 
 ```
@@ -526,7 +533,7 @@ files hold C++ algorithms and which hold browser presentation),
 | Seeded random sequences | for example 10,000 queue, 5,000 list, 3,000 binary-tree and 5,000 BST operations, compared with standard-library oracles (`std::vector`, `std::deque`, `std::set`, `std::map`, allowed in tests) |
 | Golden files and import fixtures | exact JSON responses, and valid and invalid export files for every rule |
 | `npm run test:cpp:asan` | the whole suite under AddressSanitizer and UndefinedBehaviorSanitizer: no use-after-free, leak or undefined behaviour |
-| 36 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
+| 40 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
 | Native versus WebAssembly | 2,653 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
 | GitHub Actions | on every push: the native tests, the build and the browser smoke tests; the site is deployed only if they pass |
 
