@@ -748,49 +748,6 @@ button[aria-current='page'] .ds-icon {
   text-transform: uppercase;
 }
 
-/* "Used by 1K+ visitors": a glowing pill with a live dot. */
-.visitor-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
-  padding: 5px 14px 5px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--glass-strong);
-  box-shadow: 0 6px 22px -12px var(--accent-glow);
-  color: var(--muted);
-  font-size: 0.88rem;
-  animation: rise 0.6s ease both;
-}
-
-.visitor-count strong {
-  min-width: 3.2ch;
-  background: var(--gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.live-dot {
-  position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--good);
-}
-
-.live-dot::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--good);
-  animation: halo 1.6s ease-out infinite;
-}
-
 .hero h2 {
   font-size: clamp(1.9rem, 4.2vw, 3.1rem);
   line-height: 1.08;
