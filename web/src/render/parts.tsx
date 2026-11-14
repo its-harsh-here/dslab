@@ -88,7 +88,7 @@ interface BoxNodeProps extends NodeState {
 export function BoxNode({ id, value, at, width, height, onSelect, ...state }: BoxNodeProps) {
   return (
     <>
-    {/* The highlight ring is drawn behind the node, as a sibling, so the node's own box stays its own. */}
+    {/* The halo is a sibling, not a child: its endless pulse must not change the node's own box. */}
     {state.highlighted && (
       <g className="halo-layer" transform={`translate(${at.x} ${at.y})`}>
         <rect className="halo" x={-5} y={-5} width={width + 10} height={height + 10} rx={13} />

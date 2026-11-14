@@ -84,3 +84,28 @@ test('the visible text never mentions C++, and no analytics request is made on l
   expect(external).toEqual([]);
   expect(await page.evaluate(() => 'dataLayer' in window)).toBe(false);
 });
+
+test('the logo reacts to a click and to playback, and so does the tab icon', async ({ page }) => {
+  await open(page, 'bst');
+  const mark = page.locator('.brand-mark');
+  const icon = page.locator('link[rel="icon"]');
+  const original = await icon.getAttribute('href');
+  expect(original).toBe('/dslab/favicon.svg');
+
+  // A click spins the tree and the tab icon, then both settle again.
+  await page.locator('.brand-button').click();
+  await expect(mark).toHaveClass(/celebrate/);
+  await expect(icon).toHaveAttribute('href', /^data:image\/svg\+xml,/);
+  await expect(mark).not.toHaveClass(/celebrate/);
+  await expect(icon).toHaveAttribute('href', original!);
+
+  // While an operation plays, both show activity; afterwards they are idle again.
+  await page.locator('#batch-values').fill('50, 30, 70, 20, 40');
+  await page.getByRole('button', { name: 'Insert all', exact: true }).click();
+  await expect(mark).toHaveClass(/busy/);
+  await expect(icon).toHaveAttribute('href', /^data:image\/svg\+xml,/);
+  await page.locator('.status-line button', { hasText: 'Jump to result' }).click();
+  await expectReady(page);
+  await expect(mark).not.toHaveClass(/busy/);
+  await expect(icon).toHaveAttribute('href', original!);
+});

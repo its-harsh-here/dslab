@@ -31,7 +31,10 @@ export function ExplanationPanel<S extends Snapshot>({ view }: { view: PlayerVie
   return (
     <section className="panel" aria-labelledby="explanation-heading">
       <h3 id="explanation-heading">Explanation</h3>
-      <p className="explanation" aria-live="polite">{frame.explanation}</p>
+      <p className="explanation" aria-live="polite">
+        {/* Keyed by step, so each new sentence fades in. */}
+        <span key={`${state.index}:${frame.stepId}`} className="fade-in">{frame.explanation}</span>
+      </p>
       <p className="meta step-meta">
         Step {state.index + 1} of {state.animation.frames.length} · <span className={`event-chip ev-${frame.event}`}>{eventLabel(frame.event)}</span>
       </p>
@@ -221,7 +224,7 @@ export function CostPanel({ structure, frame, total, frames, snapshotNodes, comp
           {shown.map(([key, name]) => (
             <tr key={key}>
               <th scope="row">{name}</th>
-              <td>{frame.counters[key]}</td>
+              <td><span key={frame.counters[key]} className="bump">{frame.counters[key]}</span></td>
               <td>{total[key]}</td>
             </tr>
           ))}
