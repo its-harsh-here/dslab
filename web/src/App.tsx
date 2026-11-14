@@ -96,7 +96,10 @@ export function App() {
         )}
         <div className="brand">
           <BrandMark busy={busy} onCelebrate={() => setCelebrating(true)} />
-          <h1>DSLab</h1>
+          {/* The name leads back to the overview; the hash change is handled like Back/Forward. */}
+          <a className="brand-link" href="#home" title="Go to the overview">
+            <h1>DSLab</h1>
+          </a>
         </div>
         <ThemeToggle />
       </header>

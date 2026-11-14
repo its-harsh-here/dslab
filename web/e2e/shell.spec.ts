@@ -21,7 +21,7 @@ test('the sidebar hides and shows with its button and Ctrl+B, and the choice is 
   await expect(statusLine(page)).toContainText('Ready');
   await expect(nav).toBeHidden(); // remembered
 
-  await page.locator('h1').click(); // focus outside any text box
+  await page.locator('.workspace h2').click(); // focus outside any text box (the title is a link)
   await page.keyboard.press('Control+b');
   await expect(nav).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -108,4 +108,32 @@ test('the logo reacts to a click and to playback, and so does the tab icon', asy
   await expectReady(page);
   await expect(mark).not.toHaveClass(/busy/);
   await expect(icon).toHaveAttribute('href', original!);
+});
+
+test('the DSLab title leads to the overview, which credits the developer', async ({ page }) => {
+  await open(page, 'avl');
+  await page.locator('.brand-link').click();
+  await expect(page.locator('.home .hero')).toBeVisible();
+  await expect(page).toHaveTitle('DSLab · Data structure visualizer');
+  const credit = page.locator('.home-foot a', { hasText: 'its-harsh-here' });
+  await expect(credit).toHaveAttribute('href', 'https://github.com/its-harsh-here');
+  await expect(page.locator('.home-foot')).toContainText('Developed by its-harsh-here');
+  await expect(page.locator('.home-foot')).not.toContainText('Source code');
+  await page.goBack(); // the title link made a normal history entry
+  await expect(page.locator('.workspace h2')).toHaveText('AVL tree');
+});
+
+test('the overview shows the visitor count from stats.json', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.locator('.visitor-count')).toHaveText('Used by 1K+ visitors'); // web/public/stats.json
+  await page.route('**/stats.json', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"visitors": 2500}' }));
+  await page.reload();
+  await expect(page.locator('.visitor-count')).toHaveText('Used by 2.5K+ visitors');
+  await expect(page.locator('.visitor-count')).toHaveAttribute('aria-label', 'Used by 2.5K+ visitors');
+  await page.route('**/stats.json', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"visitors": "many"}' }));
+  await page.reload();
+  await expect(page.locator('.home .hero h2')).toBeVisible();
+  await expect(page.locator('.visitor-count')).toHaveCount(0); // a malformed file shows nothing
 });

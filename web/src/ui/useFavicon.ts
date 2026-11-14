@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 
 export type FaviconMode = 'idle' | 'busy' | 'celebrate';
 
-const COLORS = ['#4f46e5', '#06b6d4', '#d946ef'];
+const COLORS = ['#4338ca', '#7c3aed', '#0891b2'];
 
 /** One frame of the tab icon: node `lit` (0 root, 1 left, 2 right) glows; the tree is turned by `angle`. */
 function frame(lit: number, angle: number): string {

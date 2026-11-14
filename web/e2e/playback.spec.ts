@@ -154,7 +154,7 @@ test('keyboard: R replays the operation on screen and End jumps to its result', 
   await page.getByRole('button', { name: 'Enqueue all', exact: true }).click();
   await finish(page);
   const [, total] = await stepOf(page);
-  await page.locator('h1').click(); // focus outside any text box
+  await page.locator('.workspace h2').click(); // focus outside any text box (the title is a link)
   await page.keyboard.press('r');
   await expect(statusLine(page)).toContainText('Playing');
   await page.keyboard.press('End');

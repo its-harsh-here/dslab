@@ -481,3 +481,14 @@ snapshot shape and drawing); array-based circular queue (decision D1 keeps queue
       browsers that animate SVG icons) and a matching `apple-touch-icon.png`.
 - [x] Design direction recorded in CLAUDE.md: as interactive as possible.
 - [x] Test for the logo and tab icon in `web/e2e/shell.spec.ts`.
+
+### Milestone 10, third follow-up (owner's request, 2026-11-14)
+
+- [x] Overview footer: "Developed by its-harsh-here", linking to github.com/its-harsh-here
+      (replaces the source-code link).
+- [x] The DSLab title in the header links to the overview.
+- [x] Refreshed `favicon.svg` and a full-bleed `apple-touch-icon.png` (the previous
+      PNG had lost the icon's colours when it was rendered).
+- [x] "Used by 1K+ visitors" on the overview, read from `web/public/stats.json`.
+- [ ] Fill `stats.json` from Google Analytics with a scheduled job (README, "Visitor
+      count"): needs a GA4 service account and a repository secret from the owner.

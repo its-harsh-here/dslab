@@ -87,7 +87,7 @@ counted so far.*
   - 140 native C++ test cases, with an independent invariant checker after every
     operation;
   - the same suite under AddressSanitizer and UBSan;
-  - 41 browser tests that compare the screen with C++'s frames;
+  - 43 browser tests that compare the screen with C++'s frames;
   - 2,653 requests answered identically by the native and the WebAssembly builds.
 
 ## The fourteen structures
@@ -489,6 +489,27 @@ The deployed site loads Google Tag Manager (container `GTM-PHB2RT78`, in
 operations is sent. The container is never loaded on `localhost`, so local development
 and the browser tests send nothing.
 
+## Visitor count
+
+The overview page shows "Used by 1K+ visitors". The number comes from
+[`web/public/stats.json`](web/public/stats.json) (`"visitors": 1000`), which is deployed
+with the site; change the number there to change the line. If the file is missing or
+not valid, the line is simply not shown.
+
+**Planned: filling it from Google Analytics.** A static page cannot ask Google Analytics
+for the number itself: the Analytics Data API needs a private service-account key, which
+must never be shipped to browsers. The intended set-up is a scheduled GitHub Actions job
+that:
+
+1. authenticates with a service account (its key stored as a repository secret) that has
+   Viewer access to the GA4 property behind `GTM-PHB2RT78`;
+2. calls the Analytics Data API (`runReport`, metric `totalUsers`, date range from the
+   launch date to today);
+3. writes the result to `web/public/stats.json` (`"source": "google-analytics"`), and
+   rebuilds and deploys the site.
+
+The page does not need to change for this: it already reads `stats.json`.
+
 ## How it works
 
 ```
@@ -537,7 +558,7 @@ files hold C++ algorithms and which hold browser presentation),
 | Seeded random sequences | for example 10,000 queue, 5,000 list, 3,000 binary-tree and 5,000 BST operations, compared with standard-library oracles (`std::vector`, `std::deque`, `std::set`, `std::map`, allowed in tests) |
 | Golden files and import fixtures | exact JSON responses, and valid and invalid export files for every rule |
 | `npm run test:cpp:asan` | the whole suite under AddressSanitizer and UndefinedBehaviorSanitizer: no use-after-free, leak or undefined behaviour |
-| 41 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
+| 43 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
 | Native versus WebAssembly | 2,653 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
 | GitHub Actions | on every push: the native tests, the build and the browser smoke tests; the site is deployed only if they pass |
 
