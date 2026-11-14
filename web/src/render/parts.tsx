@@ -87,19 +87,30 @@ interface BoxNodeProps extends NodeState {
 /** A node drawn as a box with its value, and its ID in small print. */
 export function BoxNode({ id, value, at, width, height, onSelect, ...state }: BoxNodeProps) {
   return (
+    <>
+    {/* The halo is a sibling, not a child: its endless pulse must not change the node's own box. */}
+    {state.highlighted && (
+      <g className="halo-layer" transform={`translate(${at.x} ${at.y})`}>
+        <rect className="halo" x={-5} y={-5} width={width + 10} height={height + 10} rx={13} />
+      </g>
+    )}
     <g
       data-node-id={id}
       className={nodeClasses('node', state)}
       transform={`translate(${at.x} ${at.y})`}
       {...selectableProps(id, value, state.selected ?? false, onSelect)}
     >
-      {state.selected && <rect className="selection-ring" x={-5} y={-5} width={width + 10} height={height + 10} rx={8} />}
-      <rect width={width} height={height} rx={4} />
-      <text className="node-id" x={8} y={14}>#{id}</text>
-      <text className="node-value" x={width / 2} y={height / 2 + 6} textAnchor="middle">
-        {value}
-      </text>
+      {/* The inner group carries the entrance animation, so the outer transform stays the layout's. */}
+      <g className="node-pop">
+        {state.selected && <rect className="selection-ring" x={-5} y={-5} width={width + 10} height={height + 10} rx={13} />}
+        <rect className="node-body" width={width} height={height} rx={9} />
+        <text className="node-id" x={8} y={14}>#{id}</text>
+        <text className="node-value" x={width / 2} y={height / 2 + 6} textAnchor="middle">
+          {value}
+        </text>
+      </g>
     </g>
+    </>
   );
 }
 

@@ -40,6 +40,8 @@ export interface NodeJson {
   id: number;
   value: number;
   next?: number | null;
+  prev?: number | null;
+  index?: number;
   left?: number | null;
   right?: number | null;
   height?: number;
@@ -56,6 +58,7 @@ export interface FrameJson {
   pointers: Record<string, number | null>;
   output: number[];
   pending: number[];
+  bucket?: number | null;
   snapshot: { structure: string; size: number; nodes: NodeJson[] };
 }
 
@@ -180,7 +183,8 @@ async function screenState(page: Page) {
   });
 }
 
-type Shape = 'tree' | 'stack' | 'chain';
+// 'free': the edge geometry is not checked (doubly linked chains, the ring, the hash table).
+type Shape = 'tree' | 'stack' | 'chain' | 'free';
 
 /**
  * Asserts that the step on screen is exactly `frame` (step `index` of `total`):
@@ -210,7 +214,7 @@ export async function expectStepMatchesFrame(page: Page, frame: FrameJson, index
 
   const links: string[] = [];
   for (const node of frame.snapshot.nodes) {
-    for (const target of [node.next, node.left, node.right]) {
+    for (const target of [node.next, node.prev, node.left, node.right]) {
       if (target !== null && target !== undefined) links.push(`${node.id}->${target}`);
     }
   }
@@ -233,6 +237,7 @@ export async function expectStepMatchesFrame(page: Page, frame: FrameJson, index
   expect(screen.output, 'traversal output').toEqual(frame.output.map(String));
 
   // Every edge starts and ends at the drawn positions of its two nodes.
+  if (shape === 'free') return;
   for (const edge of screen.edges) {
     const [from, to] = edge.id.split('->').map(Number);
     const a = screen.nodes.find((node) => node.id === from)!.at!;

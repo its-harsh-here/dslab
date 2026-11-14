@@ -1,7 +1,11 @@
 // One player per structure, created once when the engine has loaded.
 import type { LoadedEngine } from '../engine/loadEngine';
 import type {
+  CircularListSnapshot,
+  DequeSnapshot,
+  DoublyListSnapshot,
   EngineResponse,
+  HashTableSnapshot,
   ListSnapshot,
   QueueSnapshot,
   Snapshot,
@@ -10,8 +14,16 @@ import type {
   TreeSnapshot,
 } from '../engine/protocol';
 import type { LayoutStrategy } from '../layout/layout';
-import { listLayout, queueLayout, stackLayout } from '../layout/linear';
-import { redBlackLayout, treeLayout } from '../layout/tree';
+import {
+  circularListLayout,
+  dequeLayout,
+  doublyListLayout,
+  hashTableLayout,
+  listLayout,
+  queueLayout,
+  stackLayout,
+} from '../layout/linear';
+import { heapLayout, redBlackLayout, treeLayout } from '../layout/tree';
 import { Player } from './player';
 
 export interface Players {
@@ -22,6 +34,13 @@ export interface Players {
   readonly bst: Player<TreeSnapshot>;
   readonly avl: Player<TreeSnapshot>;
   readonly redBlack: Player<TreeSnapshot>;
+  readonly deque: Player<DequeSnapshot>;
+  readonly doublyList: Player<DoublyListSnapshot>;
+  readonly circularList: Player<CircularListSnapshot>;
+  readonly minHeap: Player<TreeSnapshot>;
+  readonly maxHeap: Player<TreeSnapshot>;
+  readonly splay: Player<TreeSnapshot>;
+  readonly hashTable: Player<HashTableSnapshot>;
 }
 
 export function createPlayers(engine: LoadedEngine): Players {
@@ -36,5 +55,12 @@ export function createPlayers(engine: LoadedEngine): Players {
     bst: make('bst', treeLayout),
     avl: make('avl', treeLayout),
     redBlack: make('redBlack', redBlackLayout),
+    deque: make('deque', dequeLayout),
+    doublyList: make('doublyList', doublyListLayout),
+    circularList: make('circularList', circularListLayout),
+    minHeap: make('minHeap', heapLayout),
+    maxHeap: make('maxHeap', heapLayout),
+    splay: make('splay', treeLayout),
+    hashTable: make('hashTable', hashTableLayout),
   };
 }

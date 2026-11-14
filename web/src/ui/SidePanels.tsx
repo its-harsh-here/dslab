@@ -4,6 +4,7 @@
 import { useLayoutEffect, useRef } from 'react';
 
 import type {
+  CircularListSnapshot,
   CatalogOperation,
   Counters,
   Frame,
@@ -15,6 +16,7 @@ import type {
   TreeSnapshot,
 } from '../engine/protocol';
 import { chainFrom } from '../layout/layout';
+import { bucketChains, circleFrom } from '../layout/linear';
 import type { PlayerView } from '../playback/usePlayer';
 import { describeResult, eventLabel } from './describe';
 
@@ -29,9 +31,12 @@ export function ExplanationPanel<S extends Snapshot>({ view }: { view: PlayerVie
   return (
     <section className="panel" aria-labelledby="explanation-heading">
       <h3 id="explanation-heading">Explanation</h3>
-      <p className="explanation" aria-live="polite">{frame.explanation}</p>
-      <p className="meta">
-        Step {state.index + 1} of {state.animation.frames.length} · {eventLabel(frame.event)}
+      <p className="explanation" aria-live="polite">
+        {/* Keyed by step, so each new sentence fades in. */}
+        <span key={`${state.index}:${frame.stepId}`} className="fade-in">{frame.explanation}</span>
+      </p>
+      <p className="meta step-meta">
+        Step {state.index + 1} of {state.animation.frames.length} · <span className={`event-chip ev-${frame.event}`}>{eventLabel(frame.event)}</span>
       </p>
       {frame.output.length > 0 && (
         <div className="output">
@@ -116,6 +121,20 @@ function isTree(snapshot: Snapshot): snapshot is TreeSnapshot {
   return 'root' in snapshot;
 }
 
+/** How a linear structure is read: its entry pointer's name, and its nodes in order from there. */
+function linearOrder(snapshot: Exclude<Snapshot, TreeSnapshot>): { entryName: string; chain: NodeId[] } {
+  const nodes = snapshot.nodes as readonly LinearNode[];
+  switch (snapshot.structure) {
+    case 'stack': return { entryName: 'top', chain: chainFrom(nodes, snapshot.top) };
+    case 'queue':
+    case 'deque': return { entryName: 'front', chain: chainFrom(nodes, snapshot.front) };
+    case 'list':
+    case 'doublyList': return { entryName: 'head', chain: chainFrom(nodes, snapshot.head) };
+    case 'circularList': return { entryName: 'the first node (tail.next)', chain: circleFrom(snapshot as CircularListSnapshot) };
+    case 'hashTable': return { entryName: 'bucket 0', chain: bucketChains(snapshot).flat() };
+  }
+}
+
 function nodeName(snapshot: Snapshot, id: NodeId | null): string {
   if (id === null) return 'NIL';
   const node = snapshot.nodes.find((candidate) => candidate.id === id);
@@ -130,16 +149,23 @@ export function NodeProperties({ snapshot, selectedId }: { snapshot: Snapshot; s
     if (isTree(snapshot)) {
       const tree = node as TreeNode;
       if (tree.color) rows.push(['Color', tree.color]);
+      if (tree.index !== undefined) rows.push(['Array slot', String(tree.index)]);
       if (tree.height !== undefined) rows.push(['Height', String(tree.height)]);
       if (tree.balance !== undefined) rows.push(['Balance', tree.balance > 0 ? `+${tree.balance}` : String(tree.balance)]);
       rows.push(['Left child', nodeName(snapshot, tree.left)], ['Right child', nodeName(snapshot, tree.right)]);
       rows.push(['Parent', tree.parent === null ? (snapshot.root === tree.id ? 'none (the root)' : 'none') : nodeName(snapshot, tree.parent)]);
     } else {
       const linear = node as LinearNode;
-      const entry = 'top' in snapshot ? snapshot.top : 'front' in snapshot ? snapshot.front : snapshot.head;
-      const index = chainFrom(snapshot.nodes as readonly LinearNode[], entry).indexOf(node.id);
       rows.push(['Next', nodeName(snapshot, linear.next)]);
-      rows.push(['Position', index >= 0 ? `${index} from the ${'top' in snapshot ? 'top' : 'front' in snapshot ? 'front' : 'head'}` : 'not linked in this step']);
+      if (linear.prev !== undefined) rows.push(['Prev', nodeName(snapshot, linear.prev)]);
+      if (snapshot.structure === 'hashTable') {
+        const bucket = bucketChains(snapshot).findIndex((chain) => chain.includes(node.id));
+        rows.push(['Bucket', bucket >= 0 ? `${bucket} (${node.value} mod ${snapshot.buckets.length})` : 'not linked in this step']);
+      } else {
+        const { entryName, chain } = linearOrder(snapshot);
+        const index = chain.indexOf(node.id);
+        rows.push(['Position', index >= 0 ? `${index} from ${entryName.startsWith('the') ? entryName : `the ${entryName}`}` : 'not linked in this step']);
+      }
     }
   }
   return (
@@ -180,7 +206,8 @@ export function CostPanel({ structure, frame, total, frames, snapshotNodes, comp
   complexity: string | null;
 }) {
   const shown = COUNTER_NAMES.filter(([key]) =>
-    (key !== 'rotations' || structure === 'avl' || structure === 'redBlack') && (key !== 'recolors' || structure === 'redBlack'));
+    (key !== 'rotations' || structure === 'avl' || structure === 'redBlack' || structure === 'splay') &&
+    (key !== 'recolors' || structure === 'redBlack'));
   return (
     <section className="panel" aria-labelledby="cost-heading">
       <h3 id="cost-heading">Cost</h3>
@@ -197,7 +224,7 @@ export function CostPanel({ structure, frame, total, frames, snapshotNodes, comp
           {shown.map(([key, name]) => (
             <tr key={key}>
               <th scope="row">{name}</th>
-              <td>{frame.counters[key]}</td>
+              <td><span key={frame.counters[key]} className="bump">{frame.counters[key]}</span></td>
               <td>{total[key]}</td>
             </tr>
           ))}
@@ -216,7 +243,8 @@ export function CostPanel({ structure, frame, total, frames, snapshotNodes, comp
 // --- Text view ---------------------------------------------------------------
 
 function treeLabel(node: TreeNode): string {
-  const extra = node.color ?? (node.height !== undefined ? `h${node.height}, bf ${node.balance! > 0 ? '+' : ''}${node.balance}` : null);
+  const extra = node.color ?? (node.height !== undefined ? `h${node.height}, bf ${node.balance! > 0 ? '+' : ''}${node.balance}`
+    : node.index !== undefined ? `slot ${node.index}` : null);
   return `${node.value} (#${node.id}${extra ? `, ${extra}` : ''})`;
 }
 
@@ -243,11 +271,18 @@ export function TextView({ snapshot }: { snapshot: Snapshot }) {
   if (isTree(snapshot)) {
     const byId = new Map(snapshot.nodes.map((node) => [node.id, node]));
     body = snapshot.root === null ? <p>The tree is empty (root is NIL).</p> : <ul className="text-tree"><TreeItem id={snapshot.root} byId={byId} side="root: " /></ul>;
+  } else if (snapshot.structure === 'hashTable') {
+    const byId = new Map(snapshot.nodes.map((node) => [node.id, node]));
+    body = (
+      <ol className="text-chain" start={0}>
+        {bucketChains(snapshot).map((chain, bucket) => (
+          <li key={bucket}>{chain.length === 0 ? 'NULL (empty)' : chain.map((id) => `${byId.get(id)!.value} (#${id})`).join(' → ')}</li>
+        ))}
+      </ol>
+    );
   } else {
-    const entryName = 'top' in snapshot ? 'top' : 'front' in snapshot ? 'front' : 'head';
-    const entry = 'top' in snapshot ? snapshot.top : 'front' in snapshot ? snapshot.front : snapshot.head;
+    const { entryName, chain } = linearOrder(snapshot);
     const nodes = snapshot.nodes as readonly LinearNode[];
-    const chain = chainFrom(nodes, entry);
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const loose = nodes.filter((node) => !chain.includes(node.id));
     body = (

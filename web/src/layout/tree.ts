@@ -69,3 +69,10 @@ export const redBlackLayout: LayoutStrategy<TreeSnapshot> = {
   ...treeLayout,
   box: { ...treeLayout.box, height: TREE_RADIUS + 40 },
 };
+
+// The heaps: the same tree, with room below it for the array the heap really
+// lives in (drawn 96 px below the lowest node by TreeSvg).
+export const heapLayout: LayoutStrategy<TreeSnapshot> = {
+  ...treeLayout,
+  box: { ...treeLayout.box, height: TREE_RADIUS + 150 },
+};

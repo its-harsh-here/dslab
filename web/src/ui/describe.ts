@@ -28,17 +28,27 @@ function describeData(operation: string | null, data: Readonly<Record<string, Da
     case 'addRoot':
     case 'addChild':
     case 'insert':
+    case 'pushFront':
+    case 'pushBack':
+    case 'insertFront':
+    case 'insertBack':
       return `created node #${data.nodeId}`;
     case 'pop':
     case 'dequeue':
     case 'deleteNode':
     case 'delete':
+    case 'popFront':
+    case 'popBack':
+    case 'extract':
       return `removed ${data.value} (node #${data.nodeId})`;
     case 'search':
       if (!data.found) return 'not found';
-      return `found node #${data.nodeId}` + (typeof data.index === 'number' ? ` at index ${data.index}` : '');
+      return `found node #${data.nodeId}` + (typeof data.index === 'number' ? ` at index ${data.index}` : '') +
+        (typeof data.bucket === 'number' ? ` in bucket ${data.bucket}` : '');
     case 'reverse':
       return 'reversed';
+    case 'rotate':
+      return 'rotated';
     case 'deleteSubtree':
       return `freed ${nodes(data.removedCount)}: #${(data.removedIds as readonly number[]).join(', #')}`;
     case 'preorder':
@@ -49,6 +59,8 @@ function describeData(operation: string | null, data: Readonly<Record<string, Da
       return values.length > 0 ? values.join(', ') : 'the tree is empty';
     }
     case 'peek':
+    case 'peekFront':
+    case 'peekBack':
     case 'front':
       return `${data.value} (node #${data.nodeId})`;
     case 'clear':
