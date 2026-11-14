@@ -84,7 +84,7 @@ counted so far.*
   - 140 native C++ test cases, with an independent invariant checker after every
     operation;
   - the same suite under AddressSanitizer and UBSan;
-  - 37 browser tests that compare the screen with C++'s frames;
+  - 36 browser tests that compare the screen with C++'s frames;
   - 2,653 requests answered identically by the native and the WebAssembly builds.
 
 ## The fourteen structures
@@ -526,7 +526,7 @@ files hold C++ algorithms and which hold browser presentation),
 | Seeded random sequences | for example 10,000 queue, 5,000 list, 3,000 binary-tree and 5,000 BST operations, compared with standard-library oracles (`std::vector`, `std::deque`, `std::set`, `std::map`, allowed in tests) |
 | Golden files and import fixtures | exact JSON responses, and valid and invalid export files for every rule |
 | `npm run test:cpp:asan` | the whole suite under AddressSanitizer and UndefinedBehaviorSanitizer: no use-after-free, leak or undefined behaviour |
-| 37 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
+| 36 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
 | Native versus WebAssembly | 2,653 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
 | GitHub Actions | on every push: the native tests, the build and the browser smoke tests; the site is deployed only if they pass |
 

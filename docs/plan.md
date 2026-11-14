@@ -448,11 +448,11 @@ Web:
 - [x] New stylesheet: animated background, glass panels, node entrance, halo on the node
       a step touches, flowing highlighted links, event chips, counters that flash;
       everything off under reduced motion; light stays the default theme.
-- [x] `web/e2e/new-structures.spec.ts` (9 tests, @smoke); the parity fixture grew from
+- [x] `web/e2e/new-structures.spec.ts` (8 tests, @smoke); the parity fixture grew from
       1,298 to 2,653 requests, the earlier ones unchanged.
 
 Checks run for this milestone: `npm run test:cpp` (140 cases), `npm run test:cpp:asan`,
-`npm run build`, the full Playwright suite (37 tests).
+`npm run build`, the full Playwright suite (36 tests).
 
 **Not done:** treap, skip list, trie, B-tree and graph structures (each needs its own
 snapshot shape and drawing); array-based circular queue (decision D1 keeps queues linked).
