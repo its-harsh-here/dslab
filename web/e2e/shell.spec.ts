@@ -122,18 +122,3 @@ test('the DSLab title leads to the overview, which credits the developer', async
   await page.goBack(); // the title link made a normal history entry
   await expect(page.locator('.workspace h2')).toHaveText('AVL tree');
 });
-
-test('the overview shows the visitor count from stats.json', async ({ page }) => {
-  await page.goto('./');
-  await expect(page.locator('.visitor-count')).toHaveText('Used by 1K+ visitors'); // web/public/stats.json
-  await page.route('**/stats.json', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"visitors": 2500}' }));
-  await page.reload();
-  await expect(page.locator('.visitor-count')).toHaveText('Used by 2.5K+ visitors');
-  await expect(page.locator('.visitor-count')).toHaveAttribute('aria-label', 'Used by 2.5K+ visitors');
-  await page.route('**/stats.json', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{"visitors": "many"}' }));
-  await page.reload();
-  await expect(page.locator('.home .hero h2')).toBeVisible();
-  await expect(page.locator('.visitor-count')).toHaveCount(0); // a malformed file shows nothing
-});

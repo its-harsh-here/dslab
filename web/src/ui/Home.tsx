@@ -5,7 +5,6 @@ import type { CSSProperties } from 'react';
 
 import { STRUCTURES, type StructureName } from '../engine/protocol';
 import { GROUPS, STRUCTURE_INFO } from './structures';
-import { VisitorCount } from './VisitorCount';
 
 /** The decorative drawing on a card: a few shapes that move in a loop. */
 function Preview({ structure }: { structure: StructureName }) {
@@ -78,7 +77,6 @@ export function Home({ onChoose }: { onChoose: (structure: StructureName) => voi
   return (
     <div className="home">
       <section className="hero" aria-labelledby="hero-title">
-        <VisitorCount />
         <p className="eyebrow">An interactive data-structure simulator</p>
         <h2 id="hero-title">
           Watch every pointer move, <span className="shine">one step at a time</span>.

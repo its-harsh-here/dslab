@@ -489,6 +489,4 @@ snapshot shape and drawing); array-based circular queue (decision D1 keeps queue
 - [x] The DSLab title in the header links to the overview.
 - [x] Refreshed `favicon.svg` and a full-bleed `apple-touch-icon.png` (the previous
       PNG had lost the icon's colours when it was rendered).
-- [x] "Used by 1K+ visitors" on the overview, read from `web/public/stats.json`.
-- [ ] Fill `stats.json` from Google Analytics with a scheduled job (README, "Visitor
-      count"): needs a GA4 service account and a repository secret from the owner.
+- [x] A visitor count was added, then removed completely at the owner's request.
