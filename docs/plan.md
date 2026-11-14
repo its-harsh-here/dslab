@@ -456,3 +456,15 @@ Checks run for this milestone: `npm run test:cpp` (140 cases), `npm run test:cpp
 
 **Not done:** treap, skip list, trie, B-tree and graph structures (each needs its own
 snapshot shape and drawing); array-based circular queue (decision D1 keeps queues linked).
+
+### Milestone 10, follow-up (owner's request, 2026-11-14)
+
+- [x] The structure list can be hidden (button at the top left, Ctrl+B, remembered); on
+      phones it is a drawer that closes after a choice, on Esc or on the backdrop.
+- [x] Google Tag Manager (`GTM-PHB2RT78`) on the deployed site only; in-app page views.
+- [x] The header subtitle and every visible mention of C++ removed.
+- [x] Redesign towards a plain, product-like interface: neutral colours, one accent, no
+      gradients or decorative animation; only node movement and a short grow-in remain.
+      A calmer overview page, a "could not start" page with Reload and folded details,
+      tab titles per page, Back/Forward between pages.
+- [x] `web/e2e/shell.spec.ts` (4 tests). Full suite: 40 browser tests pass.

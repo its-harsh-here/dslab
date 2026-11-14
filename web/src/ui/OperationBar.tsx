@@ -99,7 +99,7 @@ export function OperationBar<S extends Snapshot>({
   }
   let status: ReactNode;
   if (state.crash) {
-    status = <span className="status-error">The C++ engine stopped: {state.crash} Reload the page to start again.</span>;
+    status = <span className="status-error">Something went wrong: {state.crash} Reload the page to start again.</span>;
   } else if (busy) {
     const what = state.shown ? describeRequest(state.shown.operation, state.shown.args) : 'the operation';
     status = (

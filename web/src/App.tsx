@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 
+import { trackPageView } from './analytics';
+
 import { loadEngine, type LoadedEngine } from './engine/loadEngine';
 import { STRUCTURES, type Snapshot, type StructureName } from './engine/protocol';
 import { AvlPanel } from './panels/AvlPanel';
@@ -21,8 +23,10 @@ import { createPlayers, type Players } from './playback/players';
 import type { StageCommands } from './ui/Stage';
 import { Home } from './ui/Home';
 import { StructureNav, type View } from './ui/StructureNav';
+import { STRUCTURE_INFO } from './ui/structures';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useKeyboardShortcuts } from './ui/useKeyboardShortcuts';
+import { useSidebar, type Sidebar } from './ui/useSidebar';
 
 type LoadState =
   | { kind: 'loading' }
@@ -36,6 +40,11 @@ type LoadState =
 function viewFromUrl(): View {
   const name = window.location.hash.slice(1);
   return (STRUCTURES as readonly string[]).includes(name) ? (name as StructureName) : 'home';
+}
+
+/** The browser tab's title for a page. */
+function titleOf(view: View): string {
+  return view === 'home' ? 'DSLab · Data structure visualizer' : `${STRUCTURE_INFO[view].label} · DSLab`;
 }
 
 export function App() {
@@ -52,63 +61,102 @@ export function App() {
     };
   }, []);
 
+  const sidebar = useSidebar();
+  const ready = state.kind === 'ready';
+  const classes = ['app'];
+  if (ready && !sidebar.narrow && !sidebar.open) classes.push('nav-collapsed');
+  if (ready && sidebar.narrow && sidebar.open) classes.push('drawer-open');
+
   return (
-    <div className="app">
+    <div className={classes.join(' ')}>
       <header className="app-header">
+        {ready && (
+          <button type="button" className="icon-button sidebar-toggle" onClick={sidebar.toggle}
+            aria-expanded={sidebar.open} aria-controls="structure-nav" aria-keyshortcuts="Control+B"
+            title={`${sidebar.open ? 'Hide' : 'Show'} the structure list (Ctrl+B)`}>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <rect x={2.5} y={3.5} width={15} height={13} rx={2} />
+              <line x1={7.5} y1={3.5} x2={7.5} y2={16.5} />
+            </svg>
+            <span className="visually-hidden">{sidebar.open ? 'Hide structure list' : 'Show structure list'}</span>
+          </button>
+        )}
         <div className="brand">
           <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-            <line x1={16} y1={8} x2={8} y2={22} />
-            <line x1={16} y1={8} x2={24} y2={22} />
-            <circle className="m0" cx={16} cy={8} r={4.5} />
-            <circle className="m1" cx={8} cy={22} r={4.5} />
-            <circle className="m2" cx={24} cy={22} r={4.5} />
+            <line x1={16} y1={9} x2={9} y2={22} />
+            <line x1={16} y1={9} x2={23} y2={22} />
+            <circle cx={16} cy={9} r={4} />
+            <circle cx={9} cy={22} r={4} />
+            <circle cx={23} cy={22} r={4} />
           </svg>
           <h1>DSLab</h1>
         </div>
-        <p className="subtitle">Data structures, step by step. C++ engine, running in your browser.</p>
         <ThemeToggle />
       </header>
       {state.kind === 'loading' && (
-        <p className="loading" role="status">
-          <span className="loader" aria-hidden="true"><i /><i /><i /></span>
-          Loading the C++ engine (WebAssembly)…
-        </p>
+        <div className="loading" role="status">
+          <span className="spinner" aria-hidden="true" />
+          Loading…
+        </div>
       )}
       {state.kind === 'failed' && <EngineLoadErrorView error={state.error} />}
-      {state.kind === 'ready' && <Simulator engine={state.engine} />}
+      {state.kind === 'ready' && <Simulator engine={state.engine} sidebar={sidebar} />}
     </div>
   );
 }
 
-function Simulator({ engine }: { engine: LoadedEngine }) {
+function Simulator({ engine, sidebar }: { engine: LoadedEngine; sidebar: Sidebar }) {
   // Created once; the players keep each structure's state while another one is shown.
   const [players] = useState<Players>(() => createPlayers(engine));
   const [active, setActive] = useState<View>(viewFromUrl);
   const stageCommands = useRef<StageCommands | null>(null);
 
-  function choose(view: View) {
+  // 'fromUrl': the URL already names this page (Back, Forward, an edited URL),
+  // so no new history entry is added.
+  function choose(view: View, fromUrl = false) {
     if (view === active) return;
     // Leaving a structure stops its playback and drops its waiting batch.
     if (active !== 'home') players[active].cancel();
     setActive(view);
-    window.history.replaceState(null, '', `#${view}`);
+    // A new history entry, so the browser's Back button returns to the previous page.
+    if (!fromUrl) window.history.pushState(null, '', `#${view}`);
   }
 
-  // The brand link and hand-edited URLs change the hash without a click here.
+  // Choosing a page from the drawer closes it (narrow screens).
+  function chooseFromNav(view: View) {
+    sidebar.closeDrawer();
+    choose(view);
+  }
+
+  // The tab title follows the page; moves after the first load are reported as page views.
+  const firstView = useRef(true);
+  useEffect(() => {
+    document.title = titleOf(active);
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    trackPageView(document.title);
+  }, [active]);
+
+  // Back, Forward and hand-edited URLs change the hash without a click here.
   const chooseRef = useRef(choose);
   chooseRef.current = choose;
   useEffect(() => {
-    const onHashChange = () => chooseRef.current(viewFromUrl());
+    const onHashChange = () => chooseRef.current(viewFromUrl(), true);
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
   return (
     <>
-      <StructureNav active={active} onChoose={choose} />
+      <StructureNav active={active} onChoose={chooseFromNav} hidden={!sidebar.open} />
+      {sidebar.narrow && sidebar.open && (
+        <div className="drawer-backdrop" aria-hidden="true" onClick={sidebar.closeDrawer} />
+      )}
       <main className="app-main">
         {active === 'home' ? (
-          <Home onChoose={choose} />
+          <Home onChoose={(view) => choose(view)} />
         ) : (
           <>
             <Shortcuts player={players[active] as Player<Snapshot>} stageCommands={stageCommands} />
