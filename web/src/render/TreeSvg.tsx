@@ -88,7 +88,7 @@ export function TreeSvg({ frame, layout, viewBox, label, selectedId, onSelect, s
         );
       })}
 
-      {/* Highlight rings, drawn behind the nodes in their own layer. */}
+      {/* Halos are drawn in their own layer: their endless pulse must not change a node's own box. */}
       {snapshot.nodes.map((node) => {
         const at = layout.nodes.get(node.id);
         return at && hotNodes.has(node.id) ? (

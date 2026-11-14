@@ -21,8 +21,8 @@ with the button at the top left or Ctrl+B; on a phone it is a drawer.*
 | ![An AVL tree paused while a new node is created](docs/screenshots/m10-avl.png) | ![A hash table in dark mode, the bucket being worked in marked](docs/screenshots/m10-hash-table.png) |
 | *An AVL insert, paused at step 5 of 15.* | *Hash table, dark mode: the bucket a step works in is marked.* |
 
-The screenshots further down were taken before the current design: what they show is
-unchanged, but the styling in them is older.
+The screenshots further down were taken with earlier styling: what they show is
+unchanged.
 
 ![DSLab: a red-black tree paused in delete fix-up case 4, with the pseudocode line, the selected node's properties and the operation counters](docs/screenshots/readme-red-black-delete.png)
 
@@ -57,9 +57,13 @@ counted so far.*
   tree (BST), AVL tree, red-black tree, splay tree, min-heap, max-heap and hash table.
   No `std::stack`, `std::queue`, `std::deque`, `std::list`, `std::set`, `std::map`,
   `std::priority_queue` or `std::unordered_set`.
-- **An overview page** with a card for every structure, a structure list that can be
-  hidden (Ctrl+B; a drawer on phones), tab titles and Back/Forward that follow the page,
-  and each step labelled with what it does (compare, link, rotate, swap, hash…).
+- **An overview page** with an animated card for every structure, a structure list that
+  can be hidden (Ctrl+B; a drawer on phones), tab titles and Back/Forward that follow the
+  page, and each step labelled with what it does (compare, link, rotate, swap, hash…).
+- **A lively interface**: a drifting background, gradients, glowing and pulsing
+  highlights, links that flow while in use, and a logo that leans towards the pointer,
+  spins when clicked and speeds up while an operation plays. The browser-tab icon
+  animates during playback too.
 - **Every step is a real frame.** A frame holds the whole structure, the highlighted
   nodes and edges, the algorithm's pointer variables, an event type, a one-sentence
   explanation written in C++, and the ID of the pseudocode line being executed.
@@ -83,7 +87,7 @@ counted so far.*
   - 140 native C++ test cases, with an independent invariant checker after every
     operation;
   - the same suite under AddressSanitizer and UBSan;
-  - 40 browser tests that compare the screen with C++'s frames;
+  - 41 browser tests that compare the screen with C++'s frames;
   - 2,653 requests answered identically by the native and the WebAssembly builds.
 
 ## The fourteen structures
@@ -533,7 +537,7 @@ files hold C++ algorithms and which hold browser presentation),
 | Seeded random sequences | for example 10,000 queue, 5,000 list, 3,000 binary-tree and 5,000 BST operations, compared with standard-library oracles (`std::vector`, `std::deque`, `std::set`, `std::map`, allowed in tests) |
 | Golden files and import fixtures | exact JSON responses, and valid and invalid export files for every rule |
 | `npm run test:cpp:asan` | the whole suite under AddressSanitizer and UndefinedBehaviorSanitizer: no use-after-free, leak or undefined behaviour |
-| 40 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
+| 41 Playwright browser tests, `npm run test:e2e` | on the production build, every step on screen matches C++'s frame, for all fourteen structures; the user interactions listed below; any console error fails a test |
 | Native versus WebAssembly | 2,653 requests (every operation, invalid input, imports, undo/redo, 200-node trees) get identical answers from the native build and from the WebAssembly build the site uses |
 | GitHub Actions | on every push: the native tests, the build and the browser smoke tests; the site is deployed only if they pass |
 

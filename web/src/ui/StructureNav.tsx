@@ -1,5 +1,7 @@
 // The structure list: a sidebar on wide screens (it can be hidden), a drawer
 // over the page on narrow ones. "Overview" leads back to the start page.
+import type { CSSProperties } from 'react';
+
 import { STRUCTURES, type StructureName } from '../engine/protocol';
 import { GROUPS, STRUCTURE_INFO } from './structures';
 
@@ -28,7 +30,8 @@ export function StructureNav({ active, onChoose, hidden }: {
           <p className="nav-heading" id={`nav-${group.replace(/\W+/g, '-').toLowerCase()}`}>{group}</p>
           <ul aria-labelledby={`nav-${group.replace(/\W+/g, '-').toLowerCase()}`}>
             {STRUCTURES.filter((structure) => STRUCTURE_INFO[structure].group === group).map((structure) => (
-              <li key={structure}>
+              <li key={structure}
+                style={{ '--hue': STRUCTURE_INFO[structure].hue, '--order': STRUCTURES.indexOf(structure) } as CSSProperties}>
                 <button type="button" className="nav-item" aria-current={structure === active ? 'page' : undefined}
                   onClick={() => onChoose(structure)}>
                   {STRUCTURE_INFO[structure].icon}

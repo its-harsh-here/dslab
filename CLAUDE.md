@@ -75,6 +75,13 @@ Before changing engine code, read docs/architecture.md and docs/operation-contra
   operation never splays; search is undoable); hash table = 7 buckets, value mod 7,
   separate chaining, insert at the chain's head.
 
+## Design direction (owner, 2026-11-14)
+- The site must be as interactive and animated as possible: moving background,
+  gradients, glows, pulsing highlights, animated cards, a bouncing loader, a logo and a
+  tab icon that react (click, hover, pointer, playback). When in doubt, add motion and
+  feedback rather than remove it. Keep it all off under prefers-reduced-motion.
+- No mention of C++ in visible text (code comments and docs are fine).
+
 ## Layout
 engine/include · engine/src · engine/tests · engine/bindings · engine/third_party ·
 web/src · web/e2e · scripts · docs · .github/workflows (CI + GitHub Pages deploy).

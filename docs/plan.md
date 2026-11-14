@@ -468,3 +468,16 @@ snapshot shape and drawing); array-based circular queue (decision D1 keeps queue
       A calmer overview page, a "could not start" page with Reload and folded details,
       tab titles per page, Back/Forward between pages.
 - [x] `web/e2e/shell.spec.ts` (4 tests). Full suite: 40 browser tests pass.
+
+### Milestone 10, second follow-up (owner's request, 2026-11-14)
+
+- [x] All the effects of the first redesign are back (moving background, gradients,
+      glows, pulsing highlights, animated overview cards, bouncing loader); the hideable
+      sidebar, Google Tag Manager and the removal of "C++" from visible text stay.
+- [x] Interactive logo (`web/src/ui/BrandMark.tsx`): leans towards the pointer, spreads
+      on hover, spins on click, runs faster while an operation plays.
+- [x] Live tab icon (`web/src/ui/useFavicon.ts`): animates during playback and on a logo
+      click, back to `favicon.svg` when idle; new gradient `favicon.svg` (animated in
+      browsers that animate SVG icons) and a matching `apple-touch-icon.png`.
+- [x] Design direction recorded in CLAUDE.md: as interactive as possible.
+- [x] Test for the logo and tab icon in `web/e2e/shell.spec.ts`.

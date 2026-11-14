@@ -19,13 +19,16 @@ import { RedBlackPanel } from './panels/RedBlackPanel';
 import { SplayPanel } from './panels/SplayPanel';
 import { StackPanel } from './panels/StackPanel';
 import type { Player } from './playback/player';
+import { usePlayer } from './playback/usePlayer';
 import { createPlayers, type Players } from './playback/players';
+import { BrandMark } from './ui/BrandMark';
 import type { StageCommands } from './ui/Stage';
 import { Home } from './ui/Home';
 import { StructureNav, type View } from './ui/StructureNav';
 import { STRUCTURE_INFO } from './ui/structures';
 import { ThemeToggle } from './ui/ThemeToggle';
 import { useKeyboardShortcuts } from './ui/useKeyboardShortcuts';
+import { useFavicon } from './ui/useFavicon';
 import { useSidebar, type Sidebar } from './ui/useSidebar';
 
 type LoadState =
@@ -62,6 +65,15 @@ export function App() {
   }, []);
 
   const sidebar = useSidebar();
+  // True while the structure on screen plays an operation: the logo and the tab icon show it.
+  const [busy, setBusy] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+  useFavicon(celebrating ? 'celebrate' : busy ? 'busy' : 'idle');
+  useEffect(() => {
+    if (!celebrating) return;
+    const timer = window.setTimeout(() => setCelebrating(false), 900);
+    return () => window.clearTimeout(timer);
+  }, [celebrating]);
   const ready = state.kind === 'ready';
   const classes = ['app'];
   if (ready && !sidebar.narrow && !sidebar.open) classes.push('nav-collapsed');
@@ -75,37 +87,32 @@ export function App() {
             aria-expanded={sidebar.open} aria-controls="structure-nav" aria-keyshortcuts="Control+B"
             title={`${sidebar.open ? 'Hide' : 'Show'} the structure list (Ctrl+B)`}>
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+              <rect className="panel-fill" x={3} y={4} width={4.5} height={12} rx={1} />
               <rect x={2.5} y={3.5} width={15} height={13} rx={2} />
-              <line x1={7.5} y1={3.5} x2={7.5} y2={16.5} />
+              <line className="panel-edge" x1={7.5} y1={3.5} x2={7.5} y2={16.5} />
             </svg>
             <span className="visually-hidden">{sidebar.open ? 'Hide structure list' : 'Show structure list'}</span>
           </button>
         )}
         <div className="brand">
-          <svg className="brand-mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-            <line x1={16} y1={9} x2={9} y2={22} />
-            <line x1={16} y1={9} x2={23} y2={22} />
-            <circle cx={16} cy={9} r={4} />
-            <circle cx={9} cy={22} r={4} />
-            <circle cx={23} cy={22} r={4} />
-          </svg>
+          <BrandMark busy={busy} onCelebrate={() => setCelebrating(true)} />
           <h1>DSLab</h1>
         </div>
         <ThemeToggle />
       </header>
       {state.kind === 'loading' && (
         <div className="loading" role="status">
-          <span className="spinner" aria-hidden="true" />
+          <span className="loader" aria-hidden="true"><i /><i /><i /></span>
           Loading…
         </div>
       )}
       {state.kind === 'failed' && <EngineLoadErrorView error={state.error} />}
-      {state.kind === 'ready' && <Simulator engine={state.engine} sidebar={sidebar} />}
+      {state.kind === 'ready' && <Simulator engine={state.engine} sidebar={sidebar} onBusy={setBusy} />}
     </div>
   );
 }
 
-function Simulator({ engine, sidebar }: { engine: LoadedEngine; sidebar: Sidebar }) {
+function Simulator({ engine, sidebar, onBusy }: { engine: LoadedEngine; sidebar: Sidebar; onBusy: (busy: boolean) => void }) {
   // Created once; the players keep each structure's state while another one is shown.
   const [players] = useState<Players>(() => createPlayers(engine));
   const [active, setActive] = useState<View>(viewFromUrl);
@@ -160,6 +167,7 @@ function Simulator({ engine, sidebar }: { engine: LoadedEngine; sidebar: Sidebar
         ) : (
           <>
             <Shortcuts player={players[active] as Player<Snapshot>} stageCommands={stageCommands} />
+            <BusyReporter key={active} player={players[active] as Player<Snapshot>} onBusy={onBusy} />
             {/* Keyed by structure: each page starts with fresh local state (inputs, selection, camera). */}
             <Page key={active} structure={active} players={players} engine={engine} stageCommands={stageCommands} />
           </>
@@ -167,6 +175,16 @@ function Simulator({ engine, sidebar }: { engine: LoadedEngine; sidebar: Sidebar
       </main>
     </>
   );
+}
+
+/** Tells the app whether the structure on screen is playing an operation. */
+function BusyReporter({ player, onBusy }: { player: Player<Snapshot>; onBusy: (busy: boolean) => void }) {
+  const { busy } = usePlayer(player);
+  useEffect(() => {
+    onBusy(busy);
+    return () => onBusy(false);
+  }, [busy, onBusy]);
+  return null;
 }
 
 /** The keyboard listener of the structure on screen (none on the overview). */
