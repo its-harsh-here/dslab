@@ -1,25 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- DSLab tab icon: a three-node tree on an indigo-to-cyan gradient. Browsers
-       that animate SVG icons (Firefox) show the nodes lighting up in turn, like a
-       traversal; the app also animates the icon itself while an operation plays
+  <!-- DSLab tab icon: a glowing three-node tree on an indigo, violet and cyan
+       gradient. Browsers that animate SVG icons (Firefox) show the nodes
+       lighting up in turn, like a traversal, and the root's halo breathing; the
+       app also animates the icon itself while an operation plays
        (web/src/ui/useFavicon.ts). -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4f46e5"/>
-      <stop offset="0.55" stop-color="#7c3aed"/>
-      <stop offset="1" stop-color="#06b6d4"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4338ca"/>
+      <stop offset="0.5" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#0891b2"/>
     </linearGradient>
+    <radialGradient id="shine" cx="0.3" cy="0.2" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
     <style>
-      circle { fill: #fff; transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-in-out infinite; }
+      .node { fill: #fff; transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-in-out infinite; }
       .b { animation-delay: .8s; }
       .c { animation-delay: 1.6s; }
-      @keyframes pulse { 0%, 60%, 100% { transform: scale(1); opacity: .8; } 25% { transform: scale(1.25); opacity: 1; } }
-      @media (prefers-reduced-motion: reduce) { circle { animation: none; opacity: 1; } }
+      .halo { fill: none; stroke: #a5f3fc; stroke-width: 1.1; opacity: .45; transform-box: fill-box; transform-origin: center; animation: breathe 2.4s ease-in-out infinite; }
+      @keyframes pulse { 0%, 60%, 100% { transform: scale(1); opacity: .85; } 25% { transform: scale(1.22); opacity: 1; } }
+      @keyframes breathe { 0%, 100% { transform: scale(1); opacity: .6; } 50% { transform: scale(1.12); opacity: .1; } }
+      @media (prefers-reduced-motion: reduce) { .node, .halo { animation: none; } }
     </style>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#g)"/>
-  <path d="M16 9 9.5 22.5M16 9l6.5 13.5" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
-  <circle cx="16" cy="9" r="4.5"/>
-  <circle class="b" cx="9.5" cy="22.5" r="4.5"/>
-  <circle class="c" cx="22.5" cy="22.5" r="4.5"/>
+  <rect width="32" height="32" rx="9" fill="url(#bg)"/>
+  <rect width="32" height="32" rx="9" fill="url(#shine)"/>
+  <path d="M16 9.5 9.5 22.5M16 9.5l6.5 13" stroke="#ffffff" stroke-opacity="0.9" stroke-width="2.2" stroke-linecap="round"/>
+  <circle class="halo" cx="16" cy="9.5" r="5.9"/>
+  <circle class="node" cx="16" cy="9.5" r="4.4"/>
+  <circle class="node b" cx="9.5" cy="22.5" r="4"/>
+  <circle class="node c" cx="22.5" cy="22.5" r="4"/>
 </svg>
